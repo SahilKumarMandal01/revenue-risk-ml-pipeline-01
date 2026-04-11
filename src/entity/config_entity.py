@@ -41,3 +41,21 @@ class DataPipelineExtractorConfig:
             )
         except Exception as e:
             raise CustomException(e, sys)
+
+
+class DataPipelineValidatorConfig:
+    def __init__(self, data_pipeline_config: DataPipelineConfig):
+        try:
+            self.validator_root_dir: str = os.path.join(
+                data_pipeline_config.root_dir,
+                constants.VALIDATOR_ROOT_DIR_NAME
+            )
+            self.report_file_path: str = os.path.join(
+                self.validator_root_dir,
+                constants.VALIDATOR_REPORT_FILE_NAME
+            )
+            self.is_valid = None
+            self.reference_schema_file_path: str = constants.REFERENCE_SCHEMA_FILE_PATH
+            
+        except Exception as e:
+            raise CustomException(e, sys)

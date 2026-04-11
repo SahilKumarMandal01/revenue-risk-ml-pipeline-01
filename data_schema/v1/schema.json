@@ -1,0 +1,265 @@
+{
+  "schema_version": "1.0",
+  "dataset_name": "Brazilian Olist E-commerce",
+  "last_updated": "2026-04-11",
+
+  "tables": {
+    "olist_orders_dataset": {
+      "required": true,
+      "num_columns": 8,
+      "columns": {
+        "order_id": {
+          "dtype": "object",
+          "nullable": false,
+          "unique": true
+        },
+        "customer_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "order_status": {
+          "dtype": "object",
+          "nullable": false,
+          "allowed_values": [
+            "created",
+            "approved",
+            "invoiced",
+            "processing",
+            "shipped",
+            "delivered",
+            "canceled",
+            "unavailable"
+          ]
+        },
+        "order_purchase_timestamp": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "order_approved_at": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "order_delivered_carrier_date": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "order_delivered_customer_date": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "order_estimated_delivery_date": {
+          "dtype": "object",
+          "nullable": false
+        }
+      }
+    },
+
+    "olist_customers_dataset": {
+      "required": true,
+      "num_columns": 5,
+      "columns": {
+        "customer_id": {
+          "dtype": "object",
+          "nullable": false,
+          "unique": true
+        },
+        "customer_unique_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "customer_zip_code_prefix": {
+          "dtype": "int64",
+          "nullable": false
+        },
+        "customer_city": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "customer_state": {
+          "dtype": "object",
+          "nullable": false
+        }
+      }
+    },
+
+    "olist_order_items_dataset": {
+      "required": true,
+      "num_columns": 7,
+      "columns": {
+        "order_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "order_item_id": {
+          "dtype": "int64",
+          "nullable": false
+        },
+        "product_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "seller_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "shipping_limit_date": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "price": {
+          "dtype": "float64",
+          "nullable": false
+        },
+        "freight_value": {
+          "dtype": "float64",
+          "nullable": false
+        }
+      }
+    },
+
+    "olist_order_payments_dataset": {
+      "required": true,
+      "num_columns": 5,
+      "columns": {
+        "order_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "payment_sequential": {
+          "dtype": "int64",
+          "nullable": false
+        },
+        "payment_type": {
+          "dtype": "object",
+          "nullable": false,
+          "allowed_values": [
+            "credit_card",
+            "boleto",
+            "voucher",
+            "debit_card",
+            "not_defined"
+          ]
+        },
+        "payment_installments": {
+          "dtype": "int64",
+          "nullable": false
+        },
+        "payment_value": {
+          "dtype": "float64",
+          "nullable": false
+        }
+      }
+    },
+
+    "olist_order_reviews_dataset": {
+      "required": true,
+      "num_columns": 7,
+      "columns": {
+        "review_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "order_id": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "review_score": {
+          "dtype": "int64",
+          "nullable": false,
+          "allowed_values": [1, 2, 3, 4, 5]
+        },
+        "review_comment_title": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "review_comment_message": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "review_creation_date": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "review_answer_timestamp": {
+          "dtype": "object",
+          "nullable": false
+        }
+      }
+    },
+
+    "olist_products_dataset": {
+      "required": true,
+      "num_columns": 9,
+      "columns": {
+        "product_id": {
+          "dtype": "object",
+          "nullable": false,
+          "unique": true
+        },
+        "product_category_name": {
+          "dtype": "object",
+          "nullable": true
+        },
+        "product_name_lenght": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_description_lenght": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_photos_qty": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_weight_g": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_length_cm": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_height_cm": {
+          "dtype": "float64",
+          "nullable": true
+        },
+        "product_width_cm": {
+          "dtype": "float64",
+          "nullable": true
+        }
+      }
+    },
+
+    "olist_sellers_dataset": {
+      "required": true,
+      "num_columns": 4,
+      "columns": {
+        "seller_id": {
+          "dtype": "object",
+          "nullable": false,
+          "unique": true
+        },
+        "seller_zip_code_prefix": {
+          "dtype": "int64",
+          "nullable": false
+        },
+        "seller_city": {
+          "dtype": "object",
+          "nullable": false
+        },
+        "seller_state": {
+          "dtype": "object",
+          "nullable": false
+        }
+      }
+    }
+  },
+
+  "validation_rules": {
+    "strict_column_order": false,
+    "allow_extra_columns": false,
+    "allow_missing_tables": false,
+    "max_missing_percentage_per_column": 0.4
+  }
+}

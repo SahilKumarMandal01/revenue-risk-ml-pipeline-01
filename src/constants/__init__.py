@@ -2,6 +2,7 @@
 # GLOBAL CONSTANTS
 # ==========================================================
 ARTIFACT_DIR_NAME: str = "artifacts"
+REFERENCE_SCHEMA_FILE_PATH: str = "data_schema/v1/schema.json"
 
 
 # ==========================================================
