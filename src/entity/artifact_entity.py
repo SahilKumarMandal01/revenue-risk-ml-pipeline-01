@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -29,3 +30,31 @@ class DataPipelineValidatorArtifact:
             ")"
         )
 
+@dataclass(frozen=True)
+class DataPipelineTransformerArtifact:
+    master_panel_df: Any  # pd.DataFrame
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nDataPipelineTransformerArtifact(\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            f"  master_panel_shape = {self.master_panel_df.shape}\n"
+            ")"
+        )
+
+
+@dataclass(frozen=True)
+class DataPipelineLoaderArtifact:
+    local_file_path: str
+    s3_file_uri: str
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nDataPipelineLoaderArtifact(\n"
+            f"  local_file_path = {self.local_file_path}\n"
+            f"  s3_file_uri = {self.s3_file_uri}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")"
+        )
