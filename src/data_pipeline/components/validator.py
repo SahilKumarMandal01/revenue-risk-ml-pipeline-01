@@ -171,7 +171,6 @@ class Validator:
                 col_name,
                 col_rules,
                 raw_table,
-                validation_rules,
             )
 
             table_report["column_validation"][col_name] = col_report
@@ -190,7 +189,6 @@ class Validator:
         col_name: str,
         col_rules: Dict[str, Any],
         raw_table: Dict[str, Any],
-        validation_rules: Dict[str, Any],
     ) -> Dict[str, Any]:
 
         col_report = {
@@ -226,10 +224,8 @@ class Validator:
                 f"dtype mismatch (expected={expected_dtype}, actual={actual_dtype})"
             )
 
-        # Missing value validation
-        max_missing_pct = validation_rules.get(
-            "max_missing_percentage_per_column", 1.0
-        )
+        # Missing value validation (Column-Specific Threshold)
+        max_missing_pct = col_rules.get("max_missing_percentage", 0.0) 
 
         missing_count = missing_values.get(col_name, 0)
         missing_pct = missing_count / max(total_rows, 1)
@@ -238,7 +234,7 @@ class Validator:
             col_report["missing_within_threshold"] = False
             col_report["is_valid"] = False
             col_report["errors"].append(
-                f"Missing percentage exceeded ({missing_pct:.2f})"
+                f"Missing percentage exceeded ({missing_pct:.2f} > {max_missing_pct})"
             )
 
         # Load dataframe only when needed (lazy loading)
