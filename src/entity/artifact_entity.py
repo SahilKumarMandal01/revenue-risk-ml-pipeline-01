@@ -14,7 +14,7 @@ class DataPipelineExtractorArtifact:
             f"  raw_data_dir_path = {self.raw_data_dir_path}\n"
             f"  raw_data_schema_file_path = {self.raw_data_schema_file_path}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
-            ")"
+            ")\n"
         )
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ class DataPipelineValidatorArtifact:
             "\nDataPipelineValidatorArtifact(\n"
             f"  report_file_path = {self.report_file_path}\n"
             f"  is_valid = {self.is_valid}\n"
-            ")"
+            ")\n"
         )
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ class DataPipelineTransformerArtifact:
             "\nDataPipelineTransformerArtifact(\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
             f"  master_panel_shape = {self.master_panel_df.shape}\n"
-            ")"
+            ")\n"
         )
 
 
@@ -56,5 +56,5 @@ class DataPipelineLoaderArtifact:
             f"  local_file_path = {self.local_file_path}\n"
             f"  s3_file_uri = {self.s3_file_uri}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
-            ")"
+            ")\n"
         )

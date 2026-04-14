@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 
 import duckdb
 import pandas as pd
@@ -10,7 +10,6 @@ from src.entity.config_entity import DataPipelineTransformerConfig
 from src.entity.artifact_entity import (
     DataPipelineExtractorArtifact,
     DataPipelineTransformerArtifact,
-    DataPipelineValidatorArtifact,
 )
 from src.custom_exception import CustomException
 from src.custom_logging import logging
@@ -32,7 +31,6 @@ class Transformer:
         self,
         config: DataPipelineTransformerConfig,
         extractor_artifact: DataPipelineExtractorArtifact,
-        validator_artifact: DataPipelineValidatorArtifact,
     ) -> None:
         """
         Initializes Transformer with required configuration and artifacts.
@@ -40,11 +38,9 @@ class Transformer:
         Args:
             config (DataPipelineTransformerConfig): Transformer configuration.
             extractor_artifact (DataPipelineExtractorArtifact): Extractor artifact.
-            validator_artifact (DataPipelineValidatorArtifact): Validator artifact.
         """
         try:
             self.config: DataPipelineTransformerConfig = config
-            self.validator_artifact: DataPipelineValidatorArtifact = validator_artifact
             self.extractor_artifact: DataPipelineExtractorArtifact = extractor_artifact
             self.raw_data_dir: str = self.extractor_artifact.raw_data_dir_path
 
@@ -59,50 +55,43 @@ class Transformer:
     # ==========================================================
     # PUBLIC ENTRYPOINT
     # ==========================================================
-    def run(self) -> Optional[DataPipelineTransformerArtifact]:
+    def run(self) -> DataPipelineTransformerArtifact:
         """
         Executes the SQL transformation pipeline.
 
         Returns:
-            Optional[DataPipelineTransformerArtifact]: Transformer artifact if validation passes.
+            DataPipelineTransformerArtifact: Artifact containing the feature panel.
         """
         try:
-            if self.validator_artifact.is_valid:
-                logging.info("Starting Data Transformation pipeline via DuckDB.")
-                start_time: float = time.time()
+            logging.info("Starting Data Transformation pipeline via DuckDB.")
+            start_time: float = time.time()
 
-                con: duckdb.DuckDBPyConnection = self._initialize_duckdb()
+            con: duckdb.DuckDBPyConnection = self._initialize_duckdb()
 
-                try:
-                    self._build_bronze_layer(con)
-                    self._build_silver_layer(con)
+            try:
+                self._build_bronze_layer(con)
+                self._build_silver_layer(con)
 
-                    master_panel_df: pd.DataFrame = self._generate_master_panel(con)
+                master_panel_df: pd.DataFrame = self._generate_master_panel(con)
 
-                    execution_time: float = round(time.time() - start_time, 2)
-                    self._generate_metadata(master_panel_df, execution_time)
+                execution_time: float = round(time.time() - start_time, 2)
+                self._generate_metadata(master_panel_df, execution_time)
 
-                    artifact = DataPipelineTransformerArtifact(
-                        master_panel_df=master_panel_df,
-                        metadata_file_path=self.config.metadata_file_path,
-                    )
+                artifact = DataPipelineTransformerArtifact(
+                    master_panel_df=master_panel_df,
+                    metadata_file_path=self.config.metadata_file_path,
+                )
 
-                    logging.info(
-                        "Transformer pipeline completed in %ss.", execution_time
-                    )
-                    logging.info("Transformer artifact created: %s", artifact)
+                logging.info(
+                    "Transformer pipeline completed in %ss.", execution_time
+                )
+                logging.info("Transformer artifact created: %s", artifact)
 
-                    return artifact
+                return artifact
 
-                finally:
-                    con.close()
-                    logging.debug("DuckDB connection closed.")
-
-            logging.info(
-                "Pipeline Terminated: Data Validation Failed. Check report at %s",
-                self.validator_artifact.report_file_path,
-            )
-            return None
+            finally:
+                con.close()
+                logging.debug("DuckDB connection closed.")
 
         except Exception as e:
             logging.exception("Error during Transformer run.")
