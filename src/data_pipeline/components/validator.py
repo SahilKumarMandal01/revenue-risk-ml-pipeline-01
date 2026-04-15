@@ -2,8 +2,6 @@ import os
 import sys
 from typing import Dict, Any
 
-import pandas as pd
-
 from src.entity.config_entity import DataPipelineValidatorConfig
 from src.entity.artifact_entity import (
     DataPipelineExtractorArtifact,
@@ -11,7 +9,12 @@ from src.entity.artifact_entity import (
 )
 from src.custom_exception import CustomException
 from src.custom_logging import logging
-from src.utils.main_utils import write_json_file, read_json_file
+from src.utils.main_utils import (
+    write_json_file,
+    read_json_file,
+    read_csv_file,
+    read_parquet_file,
+)
 
 
 class Validator:
@@ -225,7 +228,7 @@ class Validator:
             )
 
         # Missing value validation (Column-Specific Threshold)
-        max_missing_pct = col_rules.get("max_missing_percentage", 0.0) 
+        max_missing_pct = col_rules.get("max_missing_percentage", 0.0)
 
         missing_count = missing_values.get(col_name, 0)
         missing_pct = missing_count / max(total_rows, 1)
@@ -239,15 +242,17 @@ class Validator:
 
         # Load dataframe only when needed (lazy loading)
         df = None
-        file_path = os.path.join(
-            self.raw_data_dir_path, f"{table_name}.csv"
-        )
+        csv_path = os.path.join(self.raw_data_dir_path, f"{table_name}.csv")
+        parquet_path = os.path.join(self.raw_data_dir_path, f"{table_name}.parquet")
 
         # Allowed values validation
         if "allowed_values" in col_rules:
             try:
                 if df is None:
-                    df = pd.read_csv(file_path)
+                    if os.path.exists(parquet_path):
+                        df = read_parquet_file(parquet_path)
+                    else:
+                        df = read_csv_file(csv_path)
 
                 if not df[col_name].dropna().isin(
                     col_rules["allowed_values"]
@@ -269,7 +274,10 @@ class Validator:
         if col_rules.get("unique", False):
             try:
                 if df is None:
-                    df = pd.read_csv(file_path)
+                    if os.path.exists(parquet_path):
+                        df = read_parquet_file(parquet_path)
+                    else:
+                        df = read_csv_file(csv_path)
 
                 if df[col_name].duplicated().any():
                     col_report["unique_check"] = False

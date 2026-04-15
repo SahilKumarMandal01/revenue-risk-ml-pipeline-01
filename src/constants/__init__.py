@@ -1,7 +1,6 @@
 import os
 from pathlib import Path
 
-
 # ==========================================================
 # GLOBAL CONSTANTS
 # ==========================================================
@@ -9,12 +8,10 @@ ARTIFACT_DIR_NAME: str = Path("artifacts")
 REFERENCE_SCHEMA_FILE_PATH: str = Path("data_schema/v1/schema.json")
 
 S3_BUCKET_NAME: str = "revenue-risk-ml-pipeline-01"
+S3_RAW_DATA_DIR_NAME: str = "raw_data" 
 S3_FEATURE_STORE_DIR_NAME: str = "feature_store"
 S3_ARTIFACT_DIR_NAME: str = "artifacts"
 S3_LOGS_DIR_NAME: str = "logs"
-S3_RAW_DATA_DIR_NAME: str = "raw_data"
-
-
 
 # ==========================================================
 # DATA PIPELINE CONSTANTS

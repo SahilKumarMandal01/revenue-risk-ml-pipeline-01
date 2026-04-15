@@ -21,9 +21,9 @@ class Transformer:
     Transformer component for generating the Master Feature Panel.
 
     Responsibilities:
-    - Initialize in-memory DuckDB engine.
-    - Build Bronze (raw), Silver (cleansed), and Gold (feature) layers.
-    - Generate Point-in-Time (OOT) panel data across defined snapshots.
+    - Initialize persistent DuckDB engine to prevent memory overflow.
+    - Build Bronze (raw), Silver (cleansed), and Gold (feature) layers from Parquet files.
+    - Generate Point-in-Time (OOT) panel data across dynamically defined snapshots.
     - Produce observability metadata (execution time, churn rate, row counts).
     """
 
@@ -34,10 +34,6 @@ class Transformer:
     ) -> None:
         """
         Initializes Transformer with required configuration and artifacts.
-
-        Args:
-            config (DataPipelineTransformerConfig): Transformer configuration.
-            extractor_artifact (DataPipelineExtractorArtifact): Extractor artifact.
         """
         try:
             self.config: DataPipelineTransformerConfig = config
@@ -60,7 +56,7 @@ class Transformer:
         Executes the SQL transformation pipeline.
 
         Returns:
-            DataPipelineTransformerArtifact: Artifact containing the feature panel.
+            DataPipelineTransformerArtifact: Artifact containing the engineered feature panel.
         """
         try:
             logging.info("Starting Data Transformation pipeline via DuckDB.")
@@ -101,14 +97,24 @@ class Transformer:
     # DATABASE INITIALIZATION
     # ==========================================================
     def _initialize_duckdb(self) -> duckdb.DuckDBPyConnection:
-        """Initializes in-memory DuckDB connection with optimized settings."""
+        """Initializes DuckDB connection with persistent local storage and optimized settings."""
         try:
+            db_path = self.config.duckdb_data_file_path
+
+            # Wipe the local database from previous runs to avoid state pollution
+            if os.path.exists(db_path):
+                os.remove(db_path)
+                logging.debug("Cleared previous DuckDB persistent storage at %s", db_path)
+
             logging.info(
-                "Initializing DuckDB with %s threads.", self.config.threads
+                "Initializing DuckDB persistently at %s with %s threads.", 
+                db_path, self.config.threads
             )
-            con: duckdb.DuckDBPyConnection = duckdb.connect(database=":memory:")
+            
+            con: duckdb.DuckDBPyConnection = duckdb.connect(database=db_path)
             con.execute(f"PRAGMA threads={self.config.threads}")
             return con
+            
         except Exception as e:
             logging.exception("Failed to initialize DuckDB.")
             raise CustomException(e, sys) from e
@@ -117,16 +123,17 @@ class Transformer:
     # BRONZE LAYER (RAW INGESTION)
     # ==========================================================
     def _build_bronze_layer(self, con: duckdb.DuckDBPyConnection) -> None:
-        """Creates Bronze layer views directly mapping to raw CSV files."""
+        """Creates Bronze layer views directly mapping to raw Parquet files."""
         try:
-            logging.info("Building Bronze Layer (Raw Views)...")
+            logging.info("Building Bronze Layer (Raw Views from Parquet)...")
 
+            # Maps directly to the S3 Parquet files downloaded by the Extractor
             tables: Dict[str, str] = {
-                "bronze_customers": "olist_customers_dataset.csv",
-                "bronze_orders": "olist_orders_dataset.csv",
-                "bronze_items": "olist_order_items_dataset.csv",
-                "bronze_payments": "olist_order_payments_dataset.csv",
-                "bronze_reviews": "olist_order_reviews_dataset.csv",
+                "bronze_customers": "olist_customers_dataset.parquet",
+                "bronze_orders": "olist_orders_dataset.parquet",
+                "bronze_items": "olist_order_items_dataset.parquet",
+                "bronze_payments": "olist_order_payments_dataset.parquet",
+                "bronze_reviews": "olist_order_reviews_dataset.parquet",
             }
 
             for view_name, file_name in tables.items():
@@ -137,7 +144,7 @@ class Transformer:
                 con.execute(
                     f"""
                     CREATE VIEW {view_name} AS
-                    SELECT * FROM read_csv_auto('{file_path}', HEADER=True)
+                    SELECT * FROM read_parquet('{file_path}')
                     """
                 )
 
@@ -283,7 +290,7 @@ class Transformer:
         """Generates master panel by iterating over snapshots."""
         try:
             logging.info(
-                "Generating Master Panel across %s snapshots...",
+                "Generating Master Panel across %s dynamic snapshots...",
                 len(self.config.snapshots),
             )
 

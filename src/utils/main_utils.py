@@ -10,21 +10,19 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import yaml
 
-# from src.cloud.s3_syncer import S3Sync
-# from src.constants.pipeline_constants import S3_BUCKET_NAME
 from src.custom_exception import CustomException
 from src.custom_logging import logging
 
 
-# ==============================
+# ============================================================
 # Internal Helpers
-# ==============================
+# ============================================================
 
 
 def _prepare_file_path(file_path: str, replace: bool = True) -> None:
     """
-    Prepare file path by removing existing file (if replace=True)
-    and creating parent directories.
+    Prepare file path by optionally removing existing file and
+    ensuring parent directories exist.
     """
     try:
         if replace and os.path.exists(file_path):
@@ -32,8 +30,6 @@ def _prepare_file_path(file_path: str, replace: bool = True) -> None:
             os.remove(file_path)
 
         directory = os.path.dirname(file_path)
-
-        # Ensure parent directory exists
         if directory:
             os.makedirs(directory, exist_ok=True)
 
@@ -41,37 +37,47 @@ def _prepare_file_path(file_path: str, replace: bool = True) -> None:
         raise CustomException(e, sys)
 
 
-# ==============================
+def _validate_file_exists(file_path: str, file_type: str) -> None:
+    """
+    Validate if a file exists.
+
+    Args:
+        file_path (str): Path to file.
+        file_type (str): Type of file for logging.
+
+    Raises:
+        FileNotFoundError: If file does not exist.
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"{file_type} file not found: {file_path}")
+
+
+# ============================================================
 # YAML Utilities
-# ==============================
+# ============================================================
 
 
-def read_yaml_file(file_path: str) -> Dict[str, Any]:
-    """
-    Read YAML file and return contents as dictionary.
-    """
+def read_yaml(file_path: str) -> Dict[str, Any]:
+    """Read YAML file."""
     try:
+        _validate_file_exists(file_path, "YAML")
         logging.info(f"Reading YAML file: {file_path}")
 
-        # File opened in binary mode as in original implementation
-        with open(file_path, "rb") as yaml_file:
-            return yaml.safe_load(yaml_file)
+        with open(file_path, "rb") as file:
+            return yaml.safe_load(file)
 
     except Exception as e:
         raise CustomException(e, sys)
 
 
-def write_yaml_file(
+def write_yaml(
     file_path: str,
     content: Dict[str, Any],
     replace: bool = True,
 ) -> None:
-    """
-    Write dictionary content to YAML file.
-    """
+    """Write YAML file."""
     try:
         logging.info(f"Writing YAML file: {file_path}")
-
         _prepare_file_path(file_path, replace)
 
         with open(file_path, "w") as file:
@@ -81,109 +87,15 @@ def write_yaml_file(
         raise CustomException(e, sys)
 
 
-# ==============================
-# NumPy Utilities
-# ==============================
-
-
-def save_numpy_array_data(
-    file_path: str,
-    array: np.ndarray,
-    replace: bool = True,
-) -> None:
-    """
-    Save NumPy array to disk.
-    """
-    try:
-        logging.info(f"Saving NumPy array: {file_path}")
-
-        _prepare_file_path(file_path, replace)
-
-        with open(file_path, "wb") as file_obj:
-            np.save(file_obj, array)
-
-    except Exception as e:
-        raise CustomException(e, sys)
-
-
-def load_numpy_array_data(file_path: str) -> np.ndarray:
-    """
-    Load NumPy array from disk.
-    """
-    try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Numpy file not found: {file_path}")
-
-        logging.info(f"Loading NumPy array: {file_path}")
-
-        with open(file_path, "rb") as file_obj:
-            return np.load(file_obj)
-
-    except Exception as e:
-        raise CustomException(e, sys)
-
-
-# ==============================
-# Pickle Utilities
-# ==============================
-
-
-def save_object(
-    file_path: str,
-    obj: Any,
-    replace: bool = True,
-) -> None:
-    """
-    Serialize and save Python object using pickle.
-    """
-    try:
-        logging.info(f"Saving object: {file_path}")
-
-        _prepare_file_path(file_path, replace)
-
-        with open(file_path, "wb") as file_obj:
-            pickle.dump(obj, file_obj)
-
-    except Exception as e:
-        raise CustomException(e, sys)
-
-
-def load_object(file_path: str) -> Any:
-    """
-    Load serialized Python object from disk.
-    """
-    try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"Object file not found: {file_path}")
-
-        logging.info(f"Loading object: {file_path}")
-
-        with open(file_path, "rb") as file_obj:
-            return pickle.load(file_obj)
-
-    except Exception as e:
-        raise CustomException(e, sys)
-
-
-# ==============================
+# ============================================================
 # JSON Utilities
-# ==============================
+# ============================================================
 
 
 def read_json_file(file_path: str) -> Dict[str, Any]:
-    """
-    Read JSON file and return contents as a dictionary.
-
-    Args:
-        file_path (str): Path to the JSON file.
-
-    Returns:
-        Dict[str, Any]: Parsed JSON content.
-    """
+    """Read JSON file."""
     try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"JSON file not found: {file_path}")
-
+        _validate_file_exists(file_path, "JSON")
         logging.info(f"Reading JSON file: {file_path}")
 
         with open(file_path, "r", encoding="utf-8") as file:
@@ -198,12 +110,9 @@ def write_json_file(
     content: Dict[str, Any],
     replace: bool = True,
 ) -> None:
-    """
-    Write dictionary content to a JSON file.
-    """
+    """Write JSON file."""
     try:
         logging.info(f"Writing JSON file: {file_path}")
-
         _prepare_file_path(file_path, replace)
 
         with open(file_path, "w", encoding="utf-8") as file:
@@ -213,23 +122,88 @@ def write_json_file(
         raise CustomException(e, sys)
 
 
-# ==============================
+# ============================================================
+# NumPy Utilities
+# ============================================================
+
+
+def save_numpy(
+    file_path: str,
+    array: np.ndarray,
+    replace: bool = True,
+) -> None:
+    """Save NumPy array."""
+    try:
+        logging.info(f"Saving NumPy array: {file_path}")
+        _prepare_file_path(file_path, replace)
+
+        with open(file_path, "wb") as file:
+            np.save(file, array)
+
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
+def load_numpy(file_path: str) -> np.ndarray:
+    """Load NumPy array."""
+    try:
+        _validate_file_exists(file_path, "NumPy")
+        logging.info(f"Loading NumPy array: {file_path}")
+
+        with open(file_path, "rb") as file:
+            return np.load(file)
+
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
+# ============================================================
+# Pickle Utilities
+# ============================================================
+
+
+def save_object(
+    file_path: str,
+    obj: Any,
+    replace: bool = True,
+) -> None:
+    """Save Python object using pickle."""
+    try:
+        logging.info(f"Saving object: {file_path}")
+        _prepare_file_path(file_path, replace)
+
+        with open(file_path, "wb") as file:
+            pickle.dump(obj, file)
+
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
+def load_object(file_path: str) -> Any:
+    """Load Python object from pickle."""
+    try:
+        _validate_file_exists(file_path, "Object")
+        logging.info(f"Loading object: {file_path}")
+
+        with open(file_path, "rb") as file:
+            return pickle.load(file)
+
+    except Exception as e:
+        raise CustomException(e, sys)
+
+
+# ============================================================
 # CSV Utilities
-# ==============================
+# ============================================================
 
 
 def read_csv_file(file_path: str, **kwargs) -> pd.DataFrame:
-    """
-    Read a CSV file into a pandas DataFrame.
-    """
+    """Read CSV file into DataFrame."""
     try:
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"CSV file not found: {file_path}")
-
+        _validate_file_exists(file_path, "CSV")
         logging.info(f"Reading CSV file: {file_path}")
 
         df = pd.read_csv(file_path, **kwargs)
-
         logging.info(f"CSV loaded successfully | Shape: {df.shape}")
 
         return df
@@ -238,35 +212,31 @@ def read_csv_file(file_path: str, **kwargs) -> pd.DataFrame:
         raise CustomException(e, sys)
 
 
-def save_csv_file(
+def write_csv(
     file_path: str,
     df: pd.DataFrame,
     replace: bool = True,
     index: bool = False,
     **kwargs,
 ) -> None:
-    """
-    Save a pandas DataFrame to CSV.
-    """
+    """Write DataFrame to CSV."""
     try:
         if not isinstance(df, pd.DataFrame):
-            raise TypeError("Input object must be a pandas DataFrame")
+            raise TypeError("Input must be a pandas DataFrame")
 
         logging.info(f"Saving CSV file: {file_path}")
-
         _prepare_file_path(file_path, replace)
 
         df.to_csv(file_path, index=index, **kwargs)
-
         logging.info(f"CSV saved successfully | Path: {file_path}")
 
     except Exception as e:
         raise CustomException(e, sys)
 
 
-# ==============================
+# ============================================================
 # Parquet Utilities
-# ==============================
+# ============================================================
 
 
 def csv_to_parquet(
@@ -275,26 +245,18 @@ def csv_to_parquet(
     replace: bool = True,
     **read_kwargs,
 ) -> None:
-    """
-    Convert a CSV file to Parquet format.
-    """
+    """Convert CSV to Parquet."""
     try:
-        if not os.path.exists(csv_path):
-            raise FileNotFoundError(f"CSV file not found: {csv_path}")
-
-        logging.info(f"Converting CSV to Parquet | Source: {csv_path}")
+        _validate_file_exists(csv_path, "CSV")
+        logging.info(f"Converting CSV to Parquet: {csv_path}")
 
         _prepare_file_path(parquet_path, replace)
 
         df = pd.read_csv(csv_path, **read_kwargs)
-
         table = pa.Table.from_pandas(df)
-
         pq.write_table(table, parquet_path)
 
-        logging.info(
-            f"Parquet file created successfully | Path: {parquet_path}"
-        )
+        logging.info(f"Parquet created at: {parquet_path}")
 
     except Exception as e:
         raise CustomException(e, sys)
@@ -307,50 +269,34 @@ def parquet_to_csv(
     index: bool = False,
     **kwargs,
 ) -> None:
-    """
-    Convert a Parquet file to CSV format.
-    """
+    """Convert Parquet to CSV."""
     try:
-        if not os.path.exists(parquet_path):
-            raise FileNotFoundError(
-                f"Parquet file not found: {parquet_path}"
-            )
-
-        logging.info(
-            f"Converting Parquet to CSV | Source: {parquet_path}"
-        )
+        _validate_file_exists(parquet_path, "Parquet")
+        logging.info(f"Converting Parquet to CSV: {parquet_path}")
 
         _prepare_file_path(csv_path, replace)
 
         table = pq.read_table(parquet_path)
-
         df = table.to_pandas()
-
         df.to_csv(csv_path, index=index, **kwargs)
 
-        logging.info(
-            f"CSV file created successfully | Path: {csv_path}"
-        )
+        logging.info(f"CSV created at: {csv_path}")
 
     except Exception as e:
         raise CustomException(e, sys)
 
 
-# # ==============================
-# # S3 Sync Utility
-# # ==============================
+def read_parquet_file(file_path: str) -> pd.DataFrame:
+    """Read Parquet file into DataFrame."""
+    try:
+        _validate_file_exists(file_path, "Parquet")
+        logging.info(f"Reading Parquet file: {file_path}")
 
+        table = pq.read_table(file_path)
+        df = table.to_pandas()
 
-# def sync_to_s3(local_dir, s3_prefix) -> None:
-#     """
-#     Sync a local directory to S3.
-#     """
-#     s3_sync = S3Sync()
+        logging.info(f"Parquet loaded successfully | Shape: {df.shape}")
+        return df
 
-#     # Construct S3 path following original logic
-#     s3_path = f"s3://{S3_BUCKET_NAME}/{s3_prefix}"
-
-#     s3_sync.sync_folder_to_s3(
-#         folder=local_dir,
-#         aws_bucket_url=s3_path,
-#     )
+    except Exception as e:
+        raise CustomException(e, sys)

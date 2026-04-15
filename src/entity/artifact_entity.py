@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+import pandas as pd
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class DataPipelineValidatorArtifact:
 
 @dataclass(frozen=True)
 class DataPipelineTransformerArtifact:
-    master_panel_df: Any  # pd.DataFrame
+    master_panel_df: pd.DataFrame
     metadata_file_path: str
 
     def __str__(self) -> str:
