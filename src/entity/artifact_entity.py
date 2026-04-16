@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Any
-import pandas as pd
 
 
 @dataclass(frozen=True)
 class DataPipelineExtractorArtifact:
+    """
+    Artifact containing paths for the Extractor component outputs.
+    """
     raw_data_dir_path: str
     raw_data_schema_file_path: str
     metadata_file_path: str
@@ -18,8 +19,12 @@ class DataPipelineExtractorArtifact:
             ")\n"
         )
 
+
 @dataclass(frozen=True)
 class DataPipelineValidatorArtifact:
+    """
+    Artifact containing the validation report path and boolean status.
+    """
     report_file_path: str
     is_valid: bool
 
@@ -31,22 +36,31 @@ class DataPipelineValidatorArtifact:
             ")\n"
         )
 
+
 @dataclass(frozen=True)
 class DataPipelineTransformerArtifact:
-    master_panel_df: pd.DataFrame
+    """
+    Artifact containing paths for the Transformer component outputs.
+    Note: master_panel_df has been removed to prevent Out-Of-Memory (OOM) 
+    errors, adhering to the out-of-core DuckDB processing strategy.
+    """
+    transformed_data_file_path: str
     metadata_file_path: str
 
     def __str__(self) -> str:
         return (
             "\nDataPipelineTransformerArtifact(\n"
+            f"  transformed_data_file_path = {self.transformed_data_file_path}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
-            f"  master_panel_shape = {self.master_panel_df.shape}\n"
             ")\n"
         )
 
 
 @dataclass(frozen=True)
 class DataPipelineLoaderArtifact:
+    """
+    Artifact containing local and remote (S3) paths for the exported feature store.
+    """
     local_file_path: str
     s3_file_uri: str
     metadata_file_path: str

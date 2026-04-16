@@ -1,10 +1,10 @@
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 
 import duckdb
-import pandas as pd
 
 from src.entity.config_entity import DataPipelineTransformerConfig
 from src.entity.artifact_entity import (
@@ -22,8 +22,9 @@ class Transformer:
 
     Responsibilities:
     - Initialize persistent DuckDB engine to prevent memory overflow.
-    - Build Bronze (raw), Silver (cleansed), and Gold (feature) layers from Parquet files.
+    - Build Bronze (raw), Silver (cleansed), and Gold (feature) layers.
     - Generate Point-in-Time (OOT) panel data across dynamically defined snapshots.
+    - Export Master Panel directly to Parquet (Zero-Pandas Out-of-Core Processing).
     - Produce observability metadata (execution time, churn rate, row counts).
     """
 
@@ -40,6 +41,11 @@ class Transformer:
             self.extractor_artifact: DataPipelineExtractorArtifact = extractor_artifact
             self.raw_data_dir: str = self.extractor_artifact.raw_data_dir_path
 
+            # Define output path for the out-of-core Parquet export
+            self.transformed_data_file_path: str = os.path.join(
+                self.config.transformer_root_dir, "master_panel.parquet"
+            )
+
             logging.debug(
                 "Transformer initialized with raw_data_dir=%s", self.raw_data_dir
             )
@@ -53,10 +59,10 @@ class Transformer:
     # ==========================================================
     def run(self) -> DataPipelineTransformerArtifact:
         """
-        Executes the SQL transformation pipeline.
+        Executes the SQL transformation pipeline out-of-core.
 
         Returns:
-            DataPipelineTransformerArtifact: Artifact containing the engineered feature panel.
+            DataPipelineTransformerArtifact: Artifact containing the path to the engineered feature panel.
         """
         try:
             logging.info("Starting Data Transformation pipeline via DuckDB.")
@@ -68,13 +74,13 @@ class Transformer:
                 self._build_bronze_layer(con)
                 self._build_silver_layer(con)
 
-                master_panel_df: pd.DataFrame = self._generate_master_panel(con)
+                self._generate_master_panel(con)
 
                 execution_time: float = round(time.time() - start_time, 2)
-                self._generate_metadata(master_panel_df, execution_time)
+                self._generate_metadata(con, execution_time)
 
                 artifact = DataPipelineTransformerArtifact(
-                    master_panel_df=master_panel_df,
+                    transformed_data_file_path=self.transformed_data_file_path,
                     metadata_file_path=self.config.metadata_file_path,
                 )
 
@@ -107,14 +113,15 @@ class Transformer:
                 logging.debug("Cleared previous DuckDB persistent storage at %s", db_path)
 
             logging.info(
-                "Initializing DuckDB persistently at %s with %s threads.", 
-                db_path, self.config.threads
+                "Initializing DuckDB persistently at %s with %s threads.",
+                db_path,
+                self.config.threads,
             )
-            
+
             con: duckdb.DuckDBPyConnection = duckdb.connect(database=db_path)
             con.execute(f"PRAGMA threads={self.config.threads}")
             return con
-            
+
         except Exception as e:
             logging.exception("Failed to initialize DuckDB.")
             raise CustomException(e, sys) from e
@@ -123,28 +130,39 @@ class Transformer:
     # BRONZE LAYER (RAW INGESTION)
     # ==========================================================
     def _build_bronze_layer(self, con: duckdb.DuckDBPyConnection) -> None:
-        """Creates Bronze layer views directly mapping to raw Parquet files."""
+        """Creates Bronze layer views dynamically supporting Parquet or CSV files."""
         try:
-            logging.info("Building Bronze Layer (Raw Views from Parquet)...")
+            logging.info("Building Bronze Layer (Raw Views)...")
 
-            # Maps directly to the S3 Parquet files downloaded by the Extractor
             tables: Dict[str, str] = {
-                "bronze_customers": "olist_customers_dataset.parquet",
-                "bronze_orders": "olist_orders_dataset.parquet",
-                "bronze_items": "olist_order_items_dataset.parquet",
-                "bronze_payments": "olist_order_payments_dataset.parquet",
-                "bronze_reviews": "olist_order_reviews_dataset.parquet",
+                "bronze_customers": "olist_customers_dataset",
+                "bronze_orders": "olist_orders_dataset",
+                "bronze_items": "olist_order_items_dataset",
+                "bronze_payments": "olist_order_payments_dataset",
+                "bronze_reviews": "olist_order_reviews_dataset",
             }
 
-            for view_name, file_name in tables.items():
-                file_path: str = os.path.join(self.raw_data_dir, file_name)
+            for view_name, base_name in tables.items():
+                parquet_path = os.path.join(self.raw_data_dir, f"{base_name}.parquet")
+                csv_path = os.path.join(self.raw_data_dir, f"{base_name}.csv")
+
+                if os.path.exists(parquet_path):
+                    file_path = parquet_path
+                    reader = "read_parquet"
+                elif os.path.exists(csv_path):
+                    file_path = csv_path
+                    reader = "read_csv_auto"
+                else:
+                    raise FileNotFoundError(
+                        f"Missing raw data file for dataset: {base_name}"
+                    )
 
                 logging.debug("Creating view %s from %s", view_name, file_path)
 
                 con.execute(
                     f"""
                     CREATE VIEW {view_name} AS
-                    SELECT * FROM read_parquet('{file_path}')
+                    SELECT * FROM {reader}('{file_path}')
                     """
                 )
 
@@ -227,16 +245,32 @@ class Transformer:
     def _build_loyalist_abt_query(self, cutoff_date: str) -> str:
         """Generates SQL query for Gold Layer Analytical Base Table."""
         return f"""
-        WITH
-        historical_customers AS (
+        SELECT
+            hc.customer_unique_id,
+            f.customer_state,
+            f.recency_days,
+            f.tenure_days,
+            f.frequency,
+            f.monetary_total,
+            f.aov,
+            f.max_delivery_delay_days,
+            f.has_undelivered_order,
+            f.total_canceled_orders,
+            f.freight_burden_ratio,
+            f.avg_installments,
+            f.imputed_review_score,
+            f.had_terrible_review,
+            COALESCE(t.future_ltv, 0.0) AS target_180d_ltv,
+            CASE WHEN t.future_orders > 0 THEN 0 ELSE 1 END AS target_is_churn,
+            '{cutoff_date}' AS snapshot_date
+        FROM (
             SELECT customer_unique_id
             FROM silver_enriched_orders
             WHERE purchase_ts < TIMESTAMP '{cutoff_date}'
             GROUP BY customer_unique_id
             HAVING COUNT(DISTINCT order_id) >= 2
-        ),
-
-        features AS (
+        ) hc
+        JOIN (
             SELECT
                 customer_unique_id,
                 MAX(customer_state) AS customer_state,
@@ -259,9 +293,8 @@ class Transformer:
             FROM silver_enriched_orders
             WHERE purchase_ts < TIMESTAMP '{cutoff_date}'
             GROUP BY customer_unique_id
-        ),
-
-        targets AS (
+        ) f USING(customer_unique_id)
+        LEFT JOIN (
             SELECT
                 customer_unique_id,
                 COUNT(DISTINCT order_id) AS future_orders,
@@ -271,52 +304,41 @@ class Transformer:
               AND purchase_ts < TIMESTAMP '{cutoff_date}' + INTERVAL {self.config.target_days} DAY
               AND order_status IN ('delivered', 'shipped')
             GROUP BY customer_unique_id
-        )
-
-        SELECT
-            hc.customer_unique_id,
-            f.* EXCLUDE(customer_unique_id),
-            COALESCE(t.future_ltv, 0.0) AS target_180d_ltv,
-            CASE WHEN t.future_orders > 0 THEN 0 ELSE 1 END AS target_is_churn,
-            '{cutoff_date}' AS snapshot_date
-        FROM historical_customers hc
-        JOIN features f USING(customer_unique_id)
-        LEFT JOIN targets t USING(customer_unique_id)
+        ) t USING(customer_unique_id)
         """
 
-    def _generate_master_panel(
-        self, con: duckdb.DuckDBPyConnection
-    ) -> pd.DataFrame:
-        """Generates master panel by iterating over snapshots."""
+    def _generate_master_panel(self, con: duckdb.DuckDBPyConnection) -> None:
+        """
+        Generates master panel by iterating over snapshots and directly 
+        exporting to Parquet to prevent memory bottlenecks.
+        """
         try:
             logging.info(
                 "Generating Master Panel across %s dynamic snapshots...",
                 len(self.config.snapshots),
             )
 
-            datasets: List[pd.DataFrame] = []
+            # Construct a massive UNION ALL query to execute out-of-core
+            snapshot_queries = [
+                self._build_loyalist_abt_query(date) for date in self.config.snapshots
+            ]
+            union_query = " UNION ALL ".join(snapshot_queries)
 
-            for date in self.config.snapshots:
-                logging.info("Processing snapshot: %s", date)
-                query: str = self._build_loyalist_abt_query(date)
+            # Create internal table
+            con.execute(f"CREATE TABLE master_panel AS {union_query}")
 
-                df_snapshot: pd.DataFrame = con.execute(query).fetch_df()
-                datasets.append(df_snapshot)
+            logging.info("Master Panel built in DuckDB. Exporting to Parquet...")
 
-                logging.info(
-                    " -> Yielded %s records for %s.",
-                    len(df_snapshot),
-                    date,
-                )
-
-            master_df: pd.DataFrame = pd.concat(datasets, ignore_index=True)
-
-            logging.info(
-                "Master Panel generation complete. Total records: %s",
-                len(master_df),
+            # Direct to Parquet export (Zero-Pandas operation)
+            con.execute(
+                f"""
+                COPY (SELECT * FROM master_panel) 
+                TO '{self.transformed_data_file_path}' 
+                (FORMAT PARQUET, COMPRESSION 'snappy');
+                """
             )
 
-            return master_df
+            logging.info("Successfully exported Master Panel to Parquet.")
 
         except Exception as e:
             logging.exception("Error generating master panel.")
@@ -326,21 +348,41 @@ class Transformer:
     # OBSERVABILITY
     # ==========================================================
     def _generate_metadata(
-        self, df: pd.DataFrame, execution_time: float
+        self, con: duckdb.DuckDBPyConnection, execution_time: float
     ) -> None:
-        """Generates lineage and observability metrics."""
+        """Generates lineage and observability metrics directly via DuckDB SQL."""
         try:
-            logging.info("Calculating Transformer telemetry and metadata...")
+            logging.info("Calculating Transformer telemetry via SQL...")
 
-            churn_rate: float = float(df["target_is_churn"].mean() * 100)
-            null_counts: Dict[str, int] = df.isnull().sum().to_dict()
+            # Calculate metrics via SQL to keep memory footprint low
+            total_rows = con.execute("SELECT COUNT(*) FROM master_panel").fetchone()[0]
+            
+            # Fetch Schema columns to calculate dimensions and nulls
+            describe_res = con.execute("DESCRIBE master_panel").fetchall()
+            columns = [col[0] for col in describe_res]
+            total_columns = len(columns)
+
+            churn_rate_res = con.execute(
+                "SELECT AVG(target_is_churn) * 100 FROM master_panel"
+            ).fetchone()[0]
+            churn_rate = float(churn_rate_res) if churn_rate_res is not None else 0.0
+
+            # Calculate Nulls using dynamic SQL
+            null_queries = [
+                f"CAST(SUM(CASE WHEN \"{c}\" IS NULL THEN 1 ELSE 0 END) AS INTEGER)" 
+                for c in columns
+            ]
+            null_counts_query = f"SELECT {', '.join(null_queries)} FROM master_panel"
+            null_counts_res = con.execute(null_counts_query).fetchone()
+            
+            null_counts = dict(zip(columns, null_counts_res))
 
             metadata: Dict[str, Any] = {
                 "pipeline_stage": "Transformer",
                 "execution_time_seconds": execution_time,
                 "data_profiles": {
-                    "total_rows": int(df.shape[0]),
-                    "total_columns": int(df.shape[1]),
+                    "total_rows": total_rows,
+                    "total_columns": total_columns,
                     "snapshots_processed": self.config.snapshots,
                     "target_days_window": self.config.target_days,
                 },
@@ -348,12 +390,10 @@ class Transformer:
                     "global_churn_rate_percentage": round(churn_rate, 2),
                 },
                 "schema": {
-                    "features": list(df.columns),
-                    "null_counts": {
-                        k: int(v) for k, v in null_counts.items() if v > 0
-                    },
+                    "features": columns,
+                    "null_counts": {k: v for k, v in null_counts.items() if v > 0},
                 },
-                "timestamp": pd.Timestamp.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             write_json_file(

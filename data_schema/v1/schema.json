@@ -1,26 +1,25 @@
 {
   "schema_version": "1.0.0",
   "dataset_name": "Brazilian Olist E-commerce",
-  "last_updated": "2026-04-13",
-
+  "last_updated": "2026-04-16",
   "tables": {
     "olist_orders_dataset": {
       "required": true,
       "num_columns": 8,
       "columns": {
         "order_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "unique": true,
           "max_missing_percentage": 0.0
         },
         "customer_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "order_status": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "allowed_values": [
             "created",
@@ -35,124 +34,121 @@
           "max_missing_percentage": 0.0
         },
         "order_purchase_timestamp": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "order_approved_at": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 0.05
         },
         "order_delivered_carrier_date": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 0.05
         },
         "order_delivered_customer_date": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 0.05
         },
         "order_estimated_delivery_date": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     },
-
     "olist_customers_dataset": {
       "required": true,
       "num_columns": 5,
       "columns": {
         "customer_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "unique": true,
           "max_missing_percentage": 0.0
         },
         "customer_unique_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "customer_zip_code_prefix": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "customer_city": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "customer_state": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     },
-
     "olist_order_items_dataset": {
       "required": true,
       "num_columns": 7,
       "columns": {
         "order_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "order_item_id": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "product_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "seller_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "shipping_limit_date": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "price": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "freight_value": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     },
-
     "olist_order_payments_dataset": {
       "required": true,
       "num_columns": 5,
       "columns": {
         "order_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "payment_sequential": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "payment_type": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "allowed_values": [
             "credit_card",
@@ -164,143 +160,145 @@
           "max_missing_percentage": 0.0
         },
         "payment_installments": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "payment_value": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     },
-
     "olist_order_reviews_dataset": {
       "required": true,
       "num_columns": 7,
       "columns": {
         "review_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "order_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "review_score": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
-          "allowed_values": [1, 2, 3, 4, 5],
+          "allowed_values": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
           "max_missing_percentage": 0.0
         },
         "review_comment_title": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 1.0
         },
         "review_comment_message": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 1.0
         },
         "review_creation_date": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "review_answer_timestamp": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     },
-
     "olist_products_dataset": {
       "required": true,
       "num_columns": 9,
       "columns": {
         "product_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "unique": true,
           "max_missing_percentage": 0.0
         },
         "product_category_name": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_name_lenght": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_description_lenght": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_photos_qty": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_weight_g": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_length_cm": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_height_cm": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         },
         "product_width_cm": {
-          "dtype": "float64",
+          "dtype": "DOUBLE",
           "nullable": true,
           "max_missing_percentage": 0.1
         }
       }
     },
-
     "olist_sellers_dataset": {
       "required": true,
       "num_columns": 4,
       "columns": {
         "seller_id": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "unique": true,
           "max_missing_percentage": 0.0
         },
         "seller_zip_code_prefix": {
-          "dtype": "int64",
+          "dtype": "BIGINT",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "seller_city": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         },
         "seller_state": {
-          "dtype": "object",
+          "dtype": "VARCHAR",
           "nullable": false,
           "max_missing_percentage": 0.0
         }
       }
     }
   },
-
   "validation_rules": {
     "strict_column_order": false,
     "allow_extra_columns": false,
