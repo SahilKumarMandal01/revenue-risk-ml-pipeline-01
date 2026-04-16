@@ -24,6 +24,7 @@ class Transformer:
     - Initialize persistent DuckDB engine to prevent memory overflow.
     - Build Bronze (raw), Silver (cleansed), and Gold (feature) layers.
     - Generate Point-in-Time (OOT) panel data across dynamically defined snapshots.
+    - Implement bitemporal lineage tracking (snapshot_date and ingested_at_utc).
     - Export Master Panel directly to Parquet (Zero-Pandas Out-of-Core Processing).
     - Produce observability metadata (execution time, churn rate, row counts).
     """
@@ -243,7 +244,7 @@ class Transformer:
     # GOLD LAYER (POINT-IN-TIME FEATURE ENGINEERING)
     # ==========================================================
     def _build_loyalist_abt_query(self, cutoff_date: str) -> str:
-        """Generates SQL query for Gold Layer Analytical Base Table."""
+        """Generates SQL query for Gold Layer Analytical Base Table with bitemporal lineage."""
         return f"""
         SELECT
             hc.customer_unique_id,
@@ -262,7 +263,8 @@ class Transformer:
             f.had_terrible_review,
             COALESCE(t.future_ltv, 0.0) AS target_180d_ltv,
             CASE WHEN t.future_orders > 0 THEN 0 ELSE 1 END AS target_is_churn,
-            '{cutoff_date}' AS snapshot_date
+            '{cutoff_date}' AS snapshot_date,
+            CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AS ingested_at_utc
         FROM (
             SELECT customer_unique_id
             FROM silver_enriched_orders

@@ -41,8 +41,7 @@ class DataPipelineValidatorArtifact:
 class DataPipelineTransformerArtifact:
     """
     Artifact containing paths for the Transformer component outputs.
-    Note: master_panel_df has been removed to prevent Out-Of-Memory (OOM) 
-    errors, adhering to the out-of-core DuckDB processing strategy.
+    Contains the path to the definitive out-of-core generated Parquet file.
     """
     transformed_data_file_path: str
     metadata_file_path: str
@@ -59,16 +58,16 @@ class DataPipelineTransformerArtifact:
 @dataclass(frozen=True)
 class DataPipelineLoaderArtifact:
     """
-    Artifact containing local and remote (S3) paths for the exported feature store.
+    Artifact containing remote (S3) path for the exported feature store
+    and local path for the loader's telemetry metadata.
+    Note: local_file_path has been removed to enforce a zero-copy architecture.
     """
-    local_file_path: str
     s3_file_uri: str
     metadata_file_path: str
 
     def __str__(self) -> str:
         return (
             "\nDataPipelineLoaderArtifact(\n"
-            f"  local_file_path = {self.local_file_path}\n"
             f"  s3_file_uri = {self.s3_file_uri}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
             ")\n"

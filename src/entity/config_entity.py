@@ -133,7 +133,8 @@ class DataPipelineTransformerConfig:
 class DataPipelineLoaderConfig:
     """
     Configuration for the Loader component.
-    Defines local artifact paths and remote S3 URIs for the engineered feature store.
+    Defines local artifact paths for metadata and remote S3 URIs for the feature store.
+    Note: The local Master Panel Parquet path has been removed to enforce a zero-copy architecture.
     """
 
     def __init__(self, data_pipeline_config: DataPipelineConfig) -> None:
@@ -143,11 +144,7 @@ class DataPipelineLoaderConfig:
                 constants.LOADER_ROOT_DIR_NAME,
             )
 
-            # Local Paths
-            self.master_panel_local_file_path: str = os.path.join(
-                self.loader_root_dir,
-                constants.LOADER_MASTER_PANEL_LOCAL_FILE_NAME,
-            )
+            # Local Paths (Only metadata is persisted locally in the loader)
             self.metadata_file_path: str = os.path.join(
                 self.loader_root_dir,
                 constants.LOADER_METADATA_FILE_NAME,

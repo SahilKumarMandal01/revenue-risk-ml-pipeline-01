@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import shutil
 from datetime import datetime, timezone
 from typing import Dict, Any
 
@@ -23,11 +22,11 @@ class Loader:
     Loader component for persisting the Master Feature Panel to AWS S3.
 
     Responsibilities:
+    - Act as a zero-copy pass-through layer to prevent disk storage duplication.
     - Receive the out-of-core generated Parquet file path from Transformer.
-    - Transfer the Parquet file to the Loader's artifact directory to preserve lineage.
-    - Upload the Parquet file to the AWS S3 Feature Store using native boto3.
+    - Upload the Parquet file directly to the AWS S3 Feature Store using native boto3.
     - Extract Parquet metadata (row counts) without loading data into memory.
-    - Generate observability telemetry and storage metadata.
+    - Generate observability telemetry and bitemporal lineage tracking data.
     """
 
     def __init__(
@@ -42,10 +41,11 @@ class Loader:
             self.config: DataPipelineLoaderConfig = config
             self.transformer_artifact: DataPipelineTransformerArtifact = transformer_artifact
             
+            # The definitive local path is strictly owned by the Transformer
             self.source_parquet_path: str = self.transformer_artifact.transformed_data_file_path
             self.s3_sync: S3Sync = S3Sync()
 
-            logging.info("Loader initialized successfully.")
+            logging.info("Loader initialized successfully (Zero-Copy Architecture).")
 
         except Exception as e:
             logging.exception("Error during Loader initialization.")
@@ -56,28 +56,24 @@ class Loader:
     # ==========================================================
     def run(self) -> DataPipelineLoaderArtifact:
         """
-        Executes the data loading and S3 upload process completely out-of-core.
+        Executes the data loading and S3 upload process out-of-core.
 
         Returns:
-            DataPipelineLoaderArtifact: Details of local and remote file paths.
+            DataPipelineLoaderArtifact: Details of remote S3 path and local metadata.
         """
         try:
-            logging.info("Starting Data Loader pipeline (Local to S3).")
+            logging.info("Starting Data Loader pipeline (Local to S3 Pass-Through).")
             start_time: float = time.time()
 
-            # 1. Transfer to Loader Artifact Directory (Preserve Lineage boundaries)
-            self._transfer_artifact_locally()
-
-            # 2. Upload to AWS S3 via boto3
+            # 1. Upload to AWS S3 directly from Transformer's artifact directory
             self._upload_to_s3()
 
-            # 3. Extract lightweight metrics and generate metadata
+            # 2. Extract lightweight metrics and generate metadata
             execution_time: float = round(time.time() - start_time, 2)
             self._generate_metadata(execution_time)
 
-            # 4. Package Artifact
+            # 3. Package Artifact
             artifact = DataPipelineLoaderArtifact(
-                local_file_path=self.config.master_panel_local_file_path,
                 s3_file_uri=self.config.s3_master_panel_uri,
                 metadata_file_path=self.config.metadata_file_path,
             )
@@ -90,33 +86,18 @@ class Loader:
             raise CustomException(e, sys) from e
 
     # ==========================================================
-    # FILE OPERATIONS
+    # CLOUD OPERATIONS
     # ==========================================================
-    def _transfer_artifact_locally(self) -> None:
-        """Copies the Parquet file from Transformer to Loader artifact directory."""
-        try:
-            logging.info(
-                "Transferring Master Panel locally from %s to %s",
-                self.source_parquet_path,
-                self.config.master_panel_local_file_path,
-            )
-            shutil.copy2(
-                self.source_parquet_path, 
-                self.config.master_panel_local_file_path
-            )
-        except Exception as e:
-            logging.exception("Failed to transfer artifact locally.")
-            raise CustomException(e, sys) from e
-
     def _upload_to_s3(self) -> None:
-        """Uploads the local Parquet file to the AWS S3 Feature Store."""
+        """Uploads the Parquet file directly from the Transformer artifact directory to S3."""
         try:
             logging.info(
-                "Uploading Master Panel to S3 URI: %s", 
+                "Uploading Master Panel directly from %s to S3 URI: %s", 
+                self.source_parquet_path,
                 self.config.s3_master_panel_uri
             )
             self.s3_sync.upload_file(
-                local_path=self.config.master_panel_local_file_path,
+                local_path=self.source_parquet_path,
                 s3_uri=self.config.s3_master_panel_uri,
             )
         except Exception as e:
@@ -132,18 +113,19 @@ class Loader:
         to prevent Out-Of-Memory (OOM) issues, and saves JSON observability data.
         """
         try:
-            logging.info("Generating Loader telemetry and metadata...")
+            logging.info("Generating Loader telemetry and bitemporal lineage...")
 
-            # Get file size
-            file_size_bytes: int = os.path.getsize(self.config.master_panel_local_file_path)
+            # Get file size directly from the source file
+            file_size_bytes: int = os.path.getsize(self.source_parquet_path)
             file_size_mb: float = round(file_size_bytes / (1024 * 1024), 2)
 
             # Efficiently read total rows from Parquet footer without loading data into RAM
-            parquet_metadata = pq.read_metadata(self.config.master_panel_local_file_path)
+            parquet_metadata = pq.read_metadata(self.source_parquet_path)
             total_rows: int = parquet_metadata.num_rows
 
             metadata: Dict[str, Any] = {
                 "pipeline_stage": "Loader",
+                "architecture": "zero_copy_pass_through",
                 "execution_time_seconds": execution_time,
                 "storage": {
                     "format": "parquet",
@@ -152,7 +134,7 @@ class Loader:
                     "total_rows_saved": total_rows,
                 },
                 "lineage": {
-                    "local_path": self.config.master_panel_local_file_path,
+                    "source_local_path": self.source_parquet_path,
                     "s3_uri": self.config.s3_master_panel_uri,
                     "bucket": self.config.s3_bucket_name,
                     "feature_store_prefix": self.config.s3_feature_store_dir,
