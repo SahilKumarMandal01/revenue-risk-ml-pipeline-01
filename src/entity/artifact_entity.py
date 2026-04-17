@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 
 
+# ==========================================================
+# DATA PIPELINE ARTIFACTS
+# ==========================================================
+
 @dataclass(frozen=True)
 class DataPipelineExtractorArtifact:
     """
@@ -60,7 +64,6 @@ class DataPipelineLoaderArtifact:
     """
     Artifact containing remote (S3) path for the exported feature store
     and local path for the loader's telemetry metadata.
-    Note: local_file_path has been removed to enforce a zero-copy architecture.
     """
     s3_file_uri: str
     metadata_file_path: str
@@ -70,5 +73,60 @@ class DataPipelineLoaderArtifact:
             "\nDataPipelineLoaderArtifact(\n"
             f"  s3_file_uri = {self.s3_file_uri}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")\n"
+        )
+
+
+# ==========================================================
+# TRAINING PIPELINE ARTIFACTS
+# ==========================================================
+
+@dataclass(frozen=True)
+class TrainingPipelineDataIngestionArtifact:
+    """
+    Artifact containing paths for the Out-Of-Time (OOT) temporal data splits.
+    """
+    train_data_path: str
+    val_data_path: str
+    test_data_path: str
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nTrainingPipelineDataIngestionArtifact(\n"
+            f"  train_data_path = {self.train_data_path}\n"
+            f"  val_data_path = {self.val_data_path}\n"
+            f"  test_data_path = {self.test_data_path}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")\n"
+        )
+
+
+@dataclass(frozen=True)
+class TrainingPipelineDataTransformationArtifact:
+    """
+    Artifact containing paths for the serialized preprocessor, schema metadata,
+    and the fully transformed Feature Matrices (X) and Target Vectors (y) ready for model training.
+    """
+    preprocessor_file_path: str
+    metadata_file_path: str
+    x_train_file_path: str
+    y_train_file_path: str
+    x_val_file_path: str
+    y_val_file_path: str
+    x_test_file_path: str
+    y_test_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nTrainingPipelineDataTransformationArtifact(\n"
+            f"  preprocessor_file_path = {self.preprocessor_file_path}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            f"  x_train_file_path = {self.x_train_file_path}\n"
+            f"  y_train_file_path = {self.y_train_file_path}\n"
+            f"  x_val_file_path = {self.x_val_file_path}\n"
+            f"  y_val_file_path = {self.y_val_file_path}\n"
+            f"  x_test_file_path = {self.x_test_file_path}\n"
+            f"  y_test_file_path = {self.y_test_file_path}\n"
             ")\n"
         )
