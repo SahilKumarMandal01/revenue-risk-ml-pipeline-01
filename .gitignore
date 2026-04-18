@@ -165,3 +165,4 @@ htmlcov/
 
 # Local scripts
 secrets.json
+mlflow.db

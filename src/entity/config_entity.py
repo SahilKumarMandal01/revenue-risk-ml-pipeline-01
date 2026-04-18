@@ -284,3 +284,107 @@ class TrainingPipelineDataTransformationConfig:
         except Exception as e:
             logging.exception("Error initializing TrainingPipelineDataTransformationConfig.")
             raise CustomException(e, sys) from e
+
+
+class TrainingPipelineModelTrainerConfig:
+    """
+    Configuration for the Training Pipeline Model Trainer component.
+    Defines output paths for the calibrated model, SHAP summaries, and MLflow metadata.
+    """
+
+    def __init__(self, training_pipeline_config: TrainingPipelineConfig) -> None:
+        try:
+            self.model_trainer_root_dir: str = os.path.join(
+                training_pipeline_config.root_dir,
+                constants.MODEL_TRAINER_ROOT_DIR_NAME,
+            )
+            
+            self.model_file_path: str = os.path.join(
+                self.model_trainer_root_dir,
+                constants.MODEL_TRAINER_MODEL_FILE_NAME,
+            )
+            self.shap_summary_file_path: str = os.path.join(
+                self.model_trainer_root_dir,
+                constants.MODEL_TRAINER_SHAP_SUMMARY_FILE_NAME,
+            )
+            self.metadata_file_path: str = os.path.join(
+                self.model_trainer_root_dir,
+                constants.MODEL_TRAINER_METADATA_FILE_NAME,
+            )
+
+            self.mlflow_experiment_name: str = constants.MODEL_TRAINER_MLFLOW_EXPERIMENT_NAME
+
+            os.makedirs(self.model_trainer_root_dir, exist_ok=True)
+            logging.info("TrainingPipelineModelTrainerConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing TrainingPipelineModelTrainerConfig.")
+            raise CustomException(e, sys) from e
+
+
+class TrainingPipelineModelEvaluationConfig:
+    """
+    Configuration for the Training Pipeline Model Evaluation component.
+    Defines output paths for the evaluation report and gating thresholds.
+    """
+
+    def __init__(self, training_pipeline_config: TrainingPipelineConfig) -> None:
+        try:
+            self.model_evaluation_root_dir: str = os.path.join(
+                training_pipeline_config.root_dir,
+                constants.MODEL_EVALUATION_ROOT_DIR_NAME,
+            )
+            
+            self.report_file_path: str = os.path.join(
+                self.model_evaluation_root_dir,
+                constants.MODEL_EVALUATION_REPORT_FILE_NAME,
+            )
+            self.metadata_file_path: str = os.path.join(
+                self.model_evaluation_root_dir,
+                constants.MODEL_EVALUATION_METADATA_FILE_NAME,
+            )
+
+            # Business and Hysteresis Thresholds
+            self.min_eroi_threshold: float = constants.MODEL_EVALUATION_MIN_EROI_THRESHOLD
+            self.eroi_hysteresis_margin: float = constants.MODEL_EVALUATION_EROI_HYSTERESIS_MARGIN
+
+            os.makedirs(self.model_evaluation_root_dir, exist_ok=True)
+            logging.info("TrainingPipelineModelEvaluationConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing TrainingPipelineModelEvaluationConfig.")
+            raise CustomException(e, sys) from e
+
+
+class TrainingPipelineModelRegistryConfig:
+    """
+    Configuration for the Training Pipeline Model Registry component.
+    Defines S3 URIs for immutable artifact storage and the mutable production pointer.
+    """
+
+    def __init__(self, training_pipeline_config: TrainingPipelineConfig) -> None:
+        try:
+            self.model_registry_root_dir: str = os.path.join(
+                training_pipeline_config.root_dir,
+                constants.MODEL_REGISTRY_ROOT_DIR_NAME,
+            )
+            
+            self.metadata_file_path: str = os.path.join(
+                self.model_registry_root_dir,
+                constants.MODEL_REGISTRY_METADATA_FILE_NAME,
+            )
+
+            # S3 Registry Configurations
+            self.s3_bucket_name: str = constants.S3_BUCKET_NAME
+            self.s3_registry_base_uri: str = f"s3://{self.s3_bucket_name}/{constants.S3_MODEL_REGISTRY_DIR_NAME}"
+            
+            self.s3_models_dir_uri: str = f"{self.s3_registry_base_uri}/{constants.S3_MODEL_REGISTRY_MODELS_DIR}"
+            self.s3_state_dir_uri: str = f"{self.s3_registry_base_uri}/{constants.S3_MODEL_REGISTRY_STATE_DIR}"
+            self.s3_pointer_file_uri: str = f"{self.s3_state_dir_uri}/{constants.S3_MODEL_REGISTRY_POINTER_FILE_NAME}"
+
+            os.makedirs(self.model_registry_root_dir, exist_ok=True)
+            logging.info("TrainingPipelineModelRegistryConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing TrainingPipelineModelRegistryConfig.")
+            raise CustomException(e, sys) from e

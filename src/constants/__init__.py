@@ -17,14 +17,20 @@ S3_FEATURE_STORE_DIR_NAME: str = "feature_store"
 S3_ARTIFACT_DIR_NAME: str = "artifacts"
 S3_LOGS_DIR_NAME: str = "logs"
 
+# ML Model Registry S3 Paths
+S3_MODEL_REGISTRY_DIR_NAME: str = "model_registry"
+S3_MODEL_REGISTRY_MODELS_DIR: str = "models"
+S3_MODEL_REGISTRY_STATE_DIR: str = "state"
+S3_MODEL_REGISTRY_POINTER_FILE_NAME: str = "production_champion.json"
+
 # ==========================================================
 # BUSINESS LOGIC & HYPERPARAMETERS
 # ==========================================================
-# Centralized configuration (replaces hardcoded parameters).
+# Centralized configuration for bitemporal engineering
 TARGET_DAYS: int = 180
 COMPUTE_THREADS: int = 4
 
-# Temporal Snapshot Definitions (Bitemporal Feature Engineering)
+# Temporal Snapshot Definitions
 SNAPSHOT_DATES: List[str] = [
     "2017-09-01",
     "2017-11-01",
@@ -87,11 +93,31 @@ DATA_INGESTION_METADATA_FILE_NAME: str = "metadata.json"
 DATA_TRANSFORMATION_ROOT_DIR_NAME: str = "02_data_transformation"
 DATA_TRANSFORMATION_PREPROCESSOR_FILE_NAME: str = "preprocessor.pkl"
 DATA_TRANSFORMATION_METADATA_FILE_NAME: str = "metadata.json"
-
-# Feature Matrix (X) and Target Vector (y) transformed artifacts
 DATA_TRANSFORMATION_X_TRAIN_FILE_NAME: str = "x_train.parquet"
 DATA_TRANSFORMATION_Y_TRAIN_FILE_NAME: str = "y_train.parquet"
 DATA_TRANSFORMATION_X_VAL_FILE_NAME: str = "x_val.parquet"
 DATA_TRANSFORMATION_Y_VAL_FILE_NAME: str = "y_val.parquet"
 DATA_TRANSFORMATION_X_TEST_FILE_NAME: str = "x_test.parquet"
 DATA_TRANSFORMATION_Y_TEST_FILE_NAME: str = "y_test.parquet"
+
+# 03 - Model Trainer
+MODEL_TRAINER_ROOT_DIR_NAME: str = "03_model_trainer"
+MODEL_TRAINER_MODEL_FILE_NAME: str = "model.pkl"
+MODEL_TRAINER_SHAP_SUMMARY_FILE_NAME: str = "shap_summary.png"
+MODEL_TRAINER_METADATA_FILE_NAME: str = "metadata.json"
+MODEL_TRAINER_MLFLOW_EXPERIMENT_NAME: str = "Customer_Retention_Optimization"
+
+# 04 - Model Evaluation
+MODEL_EVALUATION_ROOT_DIR_NAME: str = "04_model_evaluation"
+MODEL_EVALUATION_REPORT_FILE_NAME: str = "evaluation_report.json"
+MODEL_EVALUATION_METADATA_FILE_NAME: str = "metadata.json"
+
+# Evaluation Business Thresholds (The Gatekeeper Rules)
+# A model must generate an Expected ROI > 0% to be considered.
+MODEL_EVALUATION_MIN_EROI_THRESHOLD: float = 0.05  # 5% minimum acceptable EROI
+# A Challenger must beat the Champion by at least 2% EROI to justify promotion risk.
+MODEL_EVALUATION_EROI_HYSTERESIS_MARGIN: float = 0.02
+
+# 05 - Model Registry
+MODEL_REGISTRY_ROOT_DIR_NAME: str = "05_model_registry"
+MODEL_REGISTRY_METADATA_FILE_NAME: str = "metadata.json"
