@@ -29,3 +29,4 @@ optuna==4.8.0
 shap==0.51.0
 xgboost==3.2.0
 optuna_integration==4.8.0
+redis==7.4.0

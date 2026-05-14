@@ -388,3 +388,54 @@ class TrainingPipelineModelRegistryConfig:
         except Exception as e:
             logging.exception("Error initializing TrainingPipelineModelRegistryConfig.")
             raise CustomException(e, sys) from e
+
+
+# ==========================================================
+# INFERENCE PIPELINE CONFIGURATIONS
+# ==========================================================
+class InferencePipelineConfig:
+    """
+    Base configuration for the Inference Pipeline.
+    Responsible for creating the unique run ID and root artifact directory.
+    """
+
+    def __init__(self) -> None:
+        try:
+            self.run_id: str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+            self.root_dir: str = os.path.join(
+                constants.ARTIFACT_DIR_NAME,
+                constants.INFERENCE_PIPELINE_ROOT_DIR_NAME,
+                self.run_id,
+            )
+            os.makedirs(self.root_dir, exist_ok=True)
+            logging.info("InferencePipelineConfig initialized. Run ID: %s", self.run_id)
+
+        except Exception as e:
+            logging.exception("Error initializing InferencePipelineConfig.")
+            raise CustomException(e, sys) from e
+
+
+class InferencePipelineRegistrySyncConfig:
+    def __init__(self, inference_pipeline_config: InferencePipelineConfig):
+        try:
+            self.registry_sync_root_dir = os.path.join(
+            inference_pipeline_config.root_dir,
+            constants.INFERENCE_RGISTRY_SYNC_DIR_NAME
+            )
+
+            self.downloaded_model_file_path = os.path.join(
+                self.registry_sync_root_dir,
+                constants.INFERENCE_MODEL_FILE_NAME
+            )
+            self.metadata_file_path = os.path.join(
+                self.registry_sync_root_dir,
+                constants.INFERENCE_METADATA_FILE_NAME
+            )
+            self.s3_pointer_file_uri = (
+                f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_MODEL_REGISTRY_DIR_NAME}/"
+                f"{constants.S3_MODEL_REGISTRY_STATE_DIR}/{constants.S3_MODEL_REGISTRY_POINTER_FILE_NAME}"
+            )
+
+        except Exception as e:
+            raise CustomException(e)

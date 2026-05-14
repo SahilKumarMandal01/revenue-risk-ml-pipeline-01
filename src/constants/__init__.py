@@ -11,7 +11,7 @@ REFERENCE_SCHEMA_FILE_PATH: Path = Path("data_schema/v1/schema.json")
 # ==========================================================
 # CLOUD & INFRASTRUCTURE CONSTANTS (AWS S3)
 # ==========================================================
-S3_BUCKET_NAME: str = "revenue-risk-ml-pipeline-01"
+S3_BUCKET_NAME: str = "ml-platform-production"
 S3_RAW_DATA_DIR_NAME: str = "raw_data"
 S3_FEATURE_STORE_DIR_NAME: str = "feature_store"
 S3_ARTIFACT_DIR_NAME: str = "artifacts"
@@ -121,3 +121,13 @@ MODEL_EVALUATION_EROI_HYSTERESIS_MARGIN: float = 0.02
 # 05 - Model Registry
 MODEL_REGISTRY_ROOT_DIR_NAME: str = "05_model_registry"
 MODEL_REGISTRY_METADATA_FILE_NAME: str = "metadata.json"
+
+
+# ==========================================================
+# INFERENCE PIPELINE CONSTANTS
+# ==========================================================
+INFERENCE_PIPELINE_ROOT_DIR_NAME = "inference_pipeline"
+
+INFERENCE_RGISTRY_SYNC_DIR_NAME = "01_registry_sync"
+INFERENCE_METADATA_FILE_NAME = "metadata.josn"
+INFERENCE_MODEL_FILE_NAME = "model.pkl"

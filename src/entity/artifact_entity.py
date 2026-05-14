@@ -190,3 +190,25 @@ class TrainingPipelineModelRegistryArtifact:
             f"  deployment_status = {self.deployment_status}\n"
             ")"
         )
+
+
+# ==========================================================
+# Inference PIPELINE ARTIFACTS
+# ==========================================================
+
+@dataclass(frozen=True)
+class InferencePipelineRegistrySyncArtifact:
+    inference_run_uuid: str
+    champion_run_id: str
+    model_file_path: str
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nInferencePipelineRegistrySyncArtifact(\n"
+            f"  inference_run_uuid = {self.inference_run_uuid}\n"
+            f"  champion_run_id = {self.champion_run_id}\n"
+            f"  model_file_path = {self.model_file_path}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")"
+        )
