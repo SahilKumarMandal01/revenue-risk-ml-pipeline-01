@@ -249,6 +249,10 @@ class TrainingPipelineDataTransformationConfig:
                 self.data_transformation_root_dir,
                 constants.DATA_TRANSFORMATION_PREPROCESSOR_FILE_NAME,
             )
+            self.schema_file_path: str = os.path.join(
+                self.data_transformation_root_dir,
+                constants.DATA_TRANSFORMATION_SCHEMA_FILE_NAME
+            )
             self.metadata_file_path: str = os.path.join(
                 self.data_transformation_root_dir,
                 constants.DATA_TRANSFORMATION_METADATA_FILE_NAME,

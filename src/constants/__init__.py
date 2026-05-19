@@ -92,6 +92,7 @@ DATA_INGESTION_METADATA_FILE_NAME: str = "metadata.json"
 # 02 - Data Transformation
 DATA_TRANSFORMATION_ROOT_DIR_NAME: str = "02_data_transformation"
 DATA_TRANSFORMATION_PREPROCESSOR_FILE_NAME: str = "preprocessor.pkl"
+DATA_TRANSFORMATION_SCHEMA_FILE_NAME: str = "schema.json"
 DATA_TRANSFORMATION_METADATA_FILE_NAME: str = "metadata.json"
 DATA_TRANSFORMATION_X_TRAIN_FILE_NAME: str = "x_train.parquet"
 DATA_TRANSFORMATION_Y_TRAIN_FILE_NAME: str = "y_train.parquet"

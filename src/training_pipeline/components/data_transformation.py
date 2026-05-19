@@ -47,7 +47,6 @@ class CategoricalSchemaEnforcer(BaseEstimator, TransformerMixin):
         """
         for col in X.columns:
             if X[col].dtype == "object" or X[col].dtype.name == "string":
-                # Extract unique categories and create a strict Pandas CategoricalDtype
                 unique_categories = X[col].dropna().unique()
                 self.schema_[col] = pd.CategoricalDtype(
                     categories=unique_categories, ordered=False
@@ -61,8 +60,6 @@ class CategoricalSchemaEnforcer(BaseEstimator, TransformerMixin):
         X_out = X.copy()
         for col, cat_dtype in self.schema_.items():
             if col in X_out.columns:
-                # astype with a strict CategoricalDtype aligns the internal integer codes
-                # perfectly with the training set. Unknown classes become NaN.
                 X_out[col] = X_out[col].astype(cat_dtype)
         return X_out
 
@@ -77,6 +74,7 @@ class DataTransformation:
     - Build and fit a stateful categorical preprocessor on the training data.
     - Apply the transformation safely to the Validation and Test sets to ensure schema alignment.
     - Serialize the Scikit-Learn Pipeline as `preprocessor.pkl`.
+    - Dynamically infer and generate an immutable, production-ready system `schema.json` blueprint.
     - Save the fully transformed X and y arrays as Parquet files for the Model Training stage.
     """
 
@@ -134,6 +132,7 @@ class DataTransformation:
 
             # 5. Serialize Artifacts to Disk
             self._serialize_preprocessor(preprocessor_pipeline)
+            self._export_dynamic_production_schema(X_train_transformed)
             self._save_transformed_datasets(
                 X_train_transformed, y_train,
                 X_val_transformed, y_val,
@@ -147,6 +146,7 @@ class DataTransformation:
             # 7. Package and Return Artifact
             artifact = TrainingPipelineDataTransformationArtifact(
                 preprocessor_file_path=self.config.preprocessor_file_path,
+                schema_file_path=self.config.schema_file_path,
                 metadata_file_path=self.config.metadata_file_path,
                 x_train_file_path=self.config.x_train_file_path,
                 y_train_file_path=self.config.y_train_file_path,
@@ -183,12 +183,10 @@ class DataTransformation:
         try:
             logging.debug("Isolating features and target for %s split.", split_name)
             
-            # Extract target vector as a DataFrame for easy Parquet serialization later
             if self.config.target_column not in df.columns:
                 raise ValueError(f"Target column '{self.config.target_column}' missing in {split_name} split.")
             y = df[[self.config.target_column]].copy()
 
-            # Drop target and metadata columns to create feature matrix
             cols_to_drop = self.config.columns_to_drop + [self.config.target_column]
             cols_to_drop_existing = [col for col in cols_to_drop if col in df.columns]
             
@@ -211,6 +209,79 @@ class DataTransformation:
             joblib.dump(pipeline, self.config.preprocessor_file_path)
         except Exception as e:
             logging.exception("Failed to serialize the preprocessor.")
+            raise CustomException(e, sys) from e
+
+    def _export_dynamic_production_schema(self, X: pd.DataFrame) -> None:
+        """
+        Dynamically extracts structural metadata, types, and constraints from the 
+        training dataframe to build an exact, immutable JSON schema blueprint.
+        """
+        try:
+            logging.info("Dynamically generating production schema blueprint.")
+            
+            features_dict = {}
+            for col in X.columns:
+                dtype_name = str(X[col].dtype)
+                is_null = bool(X[col].isnull().any())
+                
+                # Identify Categorical Features
+                if dtype_name in ["category", "object", "string"]:
+                    allowed_vals = [str(val) for val in X[col].dropna().unique()]
+                    features_dict[col] = {
+                        "type": "categorical",
+                        "pandas_dtype": "category",
+                        "nullable": is_null,
+                        "allowed_values": allowed_vals,
+                        "description": f"Categorical feature representing {col}."
+                    }
+                else:
+                    # Treat as Numerical Feature
+                    min_val = float(X[col].min()) if pd.notnull(X[col].min()) else None
+                    max_val = float(X[col].max()) if pd.notnull(X[col].max()) else None
+                    
+                    constraints = {}
+                    if min_val is not None:
+                        constraints["min"] = int(min_val) if min_val.is_integer() else min_val
+                    if max_val is not None:
+                        constraints["max"] = int(max_val) if max_val.is_integer() else max_val
+                        
+                    unique_vals = X[col].dropna().unique()
+                    
+                    # Heuristic for Binary / Flag Numerical Indicators
+                    if len(unique_vals) <= 2 and all(v in [0, 1, 0.0, 1.0] for v in unique_vals):
+                        allowed = sorted([int(v) for v in unique_vals])
+                        features_dict[col] = {
+                            "type": "numerical",
+                            "pandas_dtype": dtype_name,
+                            "nullable": is_null,
+                            "allowed_values": allowed,
+                            "description": f"Binary indicator feature representing {col}."
+                        }
+                    else:
+                        features_dict[col] = {
+                            "type": "numerical",
+                            "pandas_dtype": dtype_name,
+                            "nullable": is_null,
+                            "constraints": constraints,
+                            "description": f"Numerical feature representing {col}."
+                        }
+
+            # Assemble Final Schema Structure
+            schema_blueprint = {
+                "system_context": {
+                    "target_column": self.config.target_column,
+                    "total_features": len(X.columns),
+                    "model_compatibility": "XGBClassifier_Native_Categorical"
+                },
+                "column_ordering": X.columns.tolist(),
+                "features": features_dict
+            }
+            
+            write_json_file(file_path=self.config.schema_file_path, content=schema_blueprint)
+            logging.info("Successfully exported dynamic schema blueprint to %s", self.config.schema_file_path)
+
+        except Exception as e:
+            logging.exception("Failed to write dynamic schema definition artifact.")
             raise CustomException(e, sys) from e
 
     def _save_transformed_datasets(
@@ -249,7 +320,6 @@ class DataTransformation:
             logging.info("Generating Data Transformation observability metadata.")
 
             input_features = X_train.columns.tolist()
-            # In Pandas, checking dtype == 'category' is the safest way to find categories post-transformation
             categorical_columns = [col for col in input_features if X_train[col].dtype.name == 'category']
             numerical_columns = [col for col in input_features if col not in categorical_columns]
 

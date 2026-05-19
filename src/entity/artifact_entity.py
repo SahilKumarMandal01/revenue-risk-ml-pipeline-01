@@ -109,6 +109,7 @@ class TrainingPipelineDataTransformationArtifact:
     and the fully transformed Feature Matrices (X) and Target Vectors (y) ready for model training.
     """
     preprocessor_file_path: str
+    schema_file_path: str
     metadata_file_path: str
     x_train_file_path: str
     y_train_file_path: str
@@ -121,6 +122,7 @@ class TrainingPipelineDataTransformationArtifact:
         return (
             "\nTrainingPipelineDataTransformationArtifact(\n"
             f"  preprocessor_file_path = {self.preprocessor_file_path}\n"
+            f"  schema_file_path = {self.schema_file_path}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
             f"  x_train_file_path = {self.x_train_file_path}\n"
             f"  y_train_file_path = {self.y_train_file_path}\n"
