@@ -32,7 +32,7 @@ class ModelEvaluation:
     - Calculate global statistical metrics (Log Loss, Brier Score) for the Challenger model.
     - Perform Slice-Based Evaluation (e.g., performance on High-Value customers).
     - Translate probability outputs into business metrics (Expected ROI).
-    - Retrieve the current Champion model from the S3 Registry (Cold Start handling).
+    - Retrieve the current Champion model from the updated S3 Registry structure (Cold Start handling).
     - Execute Champion vs. Challenger Duel using defined Hysteresis margins.
     - Generate an immutable, FAANG-grade evaluation report including data provenance and slice definitions.
     """
@@ -52,15 +52,9 @@ class ModelEvaluation:
             self.ingestion_artifact = ingestion_artifact
             self.s3_sync = S3Sync()
 
-            # Dynamic S3 URIs based on central constants
-            self.s3_pointer_uri = (
-                f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_MODEL_REGISTRY_DIR_NAME}/"
-                f"{constants.S3_MODEL_REGISTRY_STATE_DIR}/{constants.S3_MODEL_REGISTRY_POINTER_FILE_NAME}"
-            )
-            self.s3_models_base_uri = (
-                f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_MODEL_REGISTRY_DIR_NAME}/"
-                f"{constants.S3_MODEL_REGISTRY_MODELS_DIR}"
-            )
+            # Dynamic S3 URIs aligned with the updated model registry architecture
+            self.s3_registry_base_uri = f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_MODEL_REGISTRY_DIR_NAME}"
+            self.s3_pointer_uri = f"{self.s3_registry_base_uri}/model_state.json"
 
             os.makedirs(self.config.model_evaluation_root_dir, exist_ok=True)
             logging.info("Training Pipeline: Model Evaluation component initialized.")
@@ -85,7 +79,7 @@ class ModelEvaluation:
                 self.ingestion_artifact.test_data_path
             )
             test_set_size = len(X_test)
-            logging.info(f"Test set loaded with {test_set_size} records.")
+            logging.info("Test set loaded with %d records.", test_set_size)
 
             challenger_model = joblib.load(self.trainer_artifact.model_file_path)
 
@@ -249,8 +243,9 @@ class ModelEvaluation:
     # ==========================================================
     def _get_production_champion(self) -> Optional[Tuple[Any, Dict[str, Any]]]:
         """
-        Checks the S3 Model Registry for a currently deployed Champion model.
-        Returns the loaded model and its baseline metrics, or None if Cold Start.
+        Checks the S3 Model Registry for a currently deployed Champion model using the
+        new atomic model_state.json pointer. Returns the loaded model and its baseline metrics, 
+        or None if Cold Start.
         """
         try:
             local_pointer_path = os.path.join(self.config.model_evaluation_root_dir, "tmp_pointer.json")
@@ -258,7 +253,7 @@ class ModelEvaluation:
             try:
                 logging.info("Checking S3 for Production Champion pointer at: %s", self.s3_pointer_uri)
                 self.s3_sync.download_file(self.s3_pointer_uri, local_pointer_path)
-            except Exception as e:
+            except Exception:
                 logging.info("Production pointer not found. Assuming Cold Start scenario.")
                 return None
 
@@ -266,14 +261,18 @@ class ModelEvaluation:
                 pointer_data = json.load(f)
             
             champion_run_id = pointer_data.get("champion_run_id")
+            s3_champion_model_uri = pointer_data.get("s3_model_path")
+            
+            if not s3_champion_model_uri:
+                raise ValueError("Registry pointer file is corrupted: missing 's3_model_path' key.")
+
             champion_metrics = {
                 "eroi_baseline": pointer_data.get("eroi_baseline"),
                 "log_loss_baseline": pointer_data.get("log_loss_baseline")
             }
 
-            logging.info("Champion found (Run ID: %s). Downloading artifact.", champion_run_id)
+            logging.info("Champion found (Run ID: %s). Downloading artifact from: %s", champion_run_id, s3_champion_model_uri)
             
-            s3_champion_model_uri = f"{self.s3_models_base_uri}/{champion_run_id}/model.pkl"
             local_champion_path = os.path.join(self.config.model_evaluation_root_dir, "tmp_champion_model.pkl")
             
             self.s3_sync.download_file(s3_champion_model_uri, local_champion_path)

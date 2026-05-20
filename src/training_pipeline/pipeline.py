@@ -30,6 +30,13 @@ from src.custom_logging import logging
 class TrainingPipeline:
     """
     Orchestrates the complete Continuous Training (CT) pipeline.
+    
+    Responsibilities:
+    - Sequentially trigger Data Ingestion, Data Transformation, Model Training, 
+      Model Evaluation, and Model Registry components.
+    - Pass necessary immutable artifacts safely between component boundaries.
+    - Implement a strict gatekeeping mechanism utilizing the evaluation approval status.
+    - Sync generated execution artifacts safely to AWS S3 for traceability.
     """
 
     def __init__(self) -> None:
@@ -108,12 +115,14 @@ class TrainingPipeline:
         self,
         trainer_artifact: TrainingPipelineModelTrainerArtifact,
         evaluation_artifact: TrainingPipelineModelEvaluationArtifact,
+        transformation_artifact: TrainingPipelineDataTransformationArtifact,
     ) -> TrainingPipelineModelRegistryArtifact:
         try:
             logging.info(">>> Starting Phase 5: Model Registry")
             config = TrainingPipelineModelRegistryConfig(self.training_pipeline_config)
             model_registry = ModelRegistry(
                 config=config,
+                transformation_artifact=transformation_artifact,
                 trainer_artifact=trainer_artifact,
                 evaluation_artifact=evaluation_artifact,
             )
@@ -144,6 +153,9 @@ class TrainingPipeline:
             raise CustomException(e, sys) from e
 
     def run(self) -> None:
+        """
+        Executes the main entry point logic for the Continuous Training pipeline.
+        """
         try:
             logging.info("===================================================")
             logging.info("STARTING CONTINUOUS TRAINING (CT) PIPELINE")
@@ -159,15 +171,21 @@ class TrainingPipeline:
                 trainer_artifact, ingestion_artifact
             )
 
+            # Strict Deployment Gatekeeper
             if getattr(evaluation_artifact, "approval_status", False):
                 logging.info("Gate Check Passed: Proceeding to Model Registry & Deployment.")
-                self._run_model_registry(trainer_artifact, evaluation_artifact)
+                self._run_model_registry(
+                    trainer_artifact=trainer_artifact, 
+                    evaluation_artifact=evaluation_artifact,
+                    transformation_artifact=transformation_artifact
+                )
             else:
                 logging.warning(
                     "Gate Check Failed: Challenger model rejected. "
                     "Skipping deployment to Model Registry."
                 )
 
+            # Persist local execution traces regardless of approval status
             self._sync_artifacts()
 
             logging.info("===================================================")
