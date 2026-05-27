@@ -195,22 +195,48 @@ class TrainingPipelineModelRegistryArtifact:
 
 
 # ==========================================================
-# Inference PIPELINE ARTIFACTS
+# INFERENCE PIPELINE ARTIFACTS
 # ==========================================================
 
 @dataclass(frozen=True)
-class InferencePipelineRegistrySyncArtifact:
-    inference_run_uuid: str
-    champion_run_id: str
+class InferenceModelLoaderArtifact:
+    """
+    Artifact containing the local paths to the dynamically resolved production model,
+    its structural schema contract, the specific registry run ID, and component metadata.
+    """
     model_file_path: str
+    schema_file_path: str
+    champion_run_id: str
     metadata_file_path: str
 
     def __str__(self) -> str:
         return (
-            "\nInferencePipelineRegistrySyncArtifact(\n"
-            f"  inference_run_uuid = {self.inference_run_uuid}\n"
-            f"  champion_run_id = {self.champion_run_id}\n"
+            "\nInferenceModelLoaderArtifact(\n"
             f"  model_file_path = {self.model_file_path}\n"
+            f"  schema_file_path = {self.schema_file_path}\n"
+            f"  champion_run_id = {self.champion_run_id}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")"
+        )
+
+
+@dataclass(frozen=True)
+class InferenceFeatureMatrixBuilderArtifact:
+    """
+    Artifact containing the local path to the dynamically generated input feature matrix,
+    the temporal snapshot used for calculations, and execution telemetry.
+    """
+    feature_matrix_file_path: str
+    snapshot_date: str
+    row_count: int
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nInferenceFeatureMatrixBuilderArtifact(\n"
+            f"  feature_matrix_file_path = {self.feature_matrix_file_path}\n"
+            f"  snapshot_date = {self.snapshot_date}\n"
+            f"  row_count = {self.row_count}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
             ")"
         )

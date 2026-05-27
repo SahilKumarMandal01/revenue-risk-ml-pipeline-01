@@ -125,10 +125,17 @@ MODEL_REGISTRY_METADATA_FILE_NAME: str = "metadata.json"
 
 
 # ==========================================================
-# INFERENCE PIPELINE CONSTANTS
+# INFERENCE PIPELINE COMPONENT CONSTANTS
 # ==========================================================
-INFERENCE_PIPELINE_ROOT_DIR_NAME = "inference_pipeline"
+INFERENCE_PIPELINE_ROOT_DIR_NAME: str = "inference_pipeline"
 
-INFERENCE_RGISTRY_SYNC_DIR_NAME = "01_registry_sync"
-INFERENCE_METADATA_FILE_NAME = "metadata.josn"
-INFERENCE_MODEL_FILE_NAME = "model.pkl"
+# 01 - Current Production Model Loader
+MODEL_LOADER_ROOT_DIR_NAME: str = "01_model_loader"
+MODEL_LOADER_MODEL_FILE_NAME: str = "model.pkl"
+MODEL_LOADER_SCHEMA_FILE_NAME: str = "schema.json"
+MODEL_LOADER_METADATA_FILE_NAME: str = "metadata.json"
+
+# 02 - Input Feature Matrix Builder
+MATRIX_BUILDER_ROOT_DIR_NAME: str = "02_matrix_builder"
+MATRIX_BUILDER_OUTPUT_FILE_NAME: str = "input_feature_matrix.parquet"
+MATRIX_BUILDER_METADATA_FILE_NAME: str = "metadata.json"
