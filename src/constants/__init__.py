@@ -23,6 +23,11 @@ S3_MODEL_REGISTRY_MODELS_DIR: str = "models"
 S3_MODEL_REGISTRY_STATE_DIR: str = "state"
 S3_MODEL_REGISTRY_POINTER_FILE_NAME: str = "production_champion.json"
 
+
+S3_CUSTOMER_DATABASE_NAME: str = "company-central-data-lake"
+S3_DATA_LAKE_BRONZE_DIR_NAME: str = "bronze"
+
+
 # ==========================================================
 # BUSINESS LOGIC & HYPERPARAMETERS
 # ==========================================================
@@ -136,6 +141,7 @@ MODEL_LOADER_SCHEMA_FILE_NAME: str = "schema.json"
 MODEL_LOADER_METADATA_FILE_NAME: str = "metadata.json"
 
 # 02 - Input Feature Matrix Builder
-MATRIX_BUILDER_ROOT_DIR_NAME: str = "02_matrix_builder"
-MATRIX_BUILDER_OUTPUT_FILE_NAME: str = "input_feature_matrix.parquet"
-MATRIX_BUILDER_METADATA_FILE_NAME: str = "metadata.json"
+FEATURE_MATRIX_BUILDER_ROOT_DIR_NAME: str = "02_input_feature_matrix_builder"
+FEATURE_MATRIX_FILE_NAME: str = "input_feature_matrix.parquet"
+FEATURE_MATRIX_SCHEMA_FILE_NAME: str = "schema.json"
+FEATURE_MATRIX_METADATA_FILE_NAME: str = "metadata.json"

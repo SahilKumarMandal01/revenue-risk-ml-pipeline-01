@@ -221,22 +221,22 @@ class InferenceModelLoaderArtifact:
 
 
 @dataclass(frozen=True)
-class InferenceFeatureMatrixBuilderArtifact:
+class InferenceInputFeatureMatrixBuilderArtifact:
     """
-    Artifact containing the local path to the dynamically generated input feature matrix,
-    the temporal snapshot used for calculations, and execution telemetry.
+    Artifact containing local paths to the generated feature matrix required for inference,
+    its schema definition, pipeline metadata, and the temporal snapshot bound used.
     """
     feature_matrix_file_path: str
-    snapshot_date: str
-    row_count: int
+    schema_file_path: str
     metadata_file_path: str
+    snapshot_date: str
 
     def __str__(self) -> str:
         return (
-            "\nInferenceFeatureMatrixBuilderArtifact(\n"
+            "\nInferenceInputFeatureMatrixBuilderArtifact(\n"
             f"  feature_matrix_file_path = {self.feature_matrix_file_path}\n"
-            f"  snapshot_date = {self.snapshot_date}\n"
-            f"  row_count = {self.row_count}\n"
+            f"  schema_file_path = {self.schema_file_path}\n"
             f"  metadata_file_path = {self.metadata_file_path}\n"
+            f"  snapshot_date = {self.snapshot_date}\n"
             ")"
         )
