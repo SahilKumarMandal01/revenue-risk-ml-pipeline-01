@@ -432,21 +432,21 @@ class InferenceModelLoaderConfig:
             # Root directory for this specific component
             self.model_loader_root_dir: str = os.path.join(
                 inference_pipeline_config.root_dir,
-                constants.MODEL_LOADER_ROOT_DIR_NAME,
+                constants.INFERENCE_MODEL_LOADER_ROOT_DIR_NAME,
             )
 
             # Local scratchpad paths for the downloaded assets
             self.model_file_path: str = os.path.join(
                 self.model_loader_root_dir,
-                constants.MODEL_LOADER_MODEL_FILE_NAME,
+                constants.INFERENCE_MODEL_LOADER_MODEL_FILE_NAME,
             )
             self.schema_file_path: str = os.path.join(
                 self.model_loader_root_dir,
-                constants.MODEL_LOADER_SCHEMA_FILE_NAME,
+                constants.INFERENCE_MODEL_LOADER_SCHEMA_FILE_NAME,
             )
             self.metadata_file_path: str = os.path.join(
                 self.model_loader_root_dir,
-                constants.MODEL_LOADER_METADATA_FILE_NAME,
+                constants.INFERENCE_MODEL_LOADER_METADATA_FILE_NAME,
             )
 
             # S3 Registry Configurations
@@ -475,18 +475,18 @@ class InferenceInputFeatureMatrixBuilderConfig:
             # Component Root Directory
             self.feature_matrix_root_dir: str = os.path.join(
                 inference_pipeline_config.root_dir,
-                constants.FEATURE_MATRIX_BUILDER_ROOT_DIR_NAME,
+                constants.INFERENCE_FEATURE_MATRIX_BUILDER_ROOT_DIR_NAME,
             )
             
             # Local Artifact Paths
             self.feature_matrix_file_path: str = os.path.join(
-                self.feature_matrix_root_dir, constants.FEATURE_MATRIX_FILE_NAME
+                self.feature_matrix_root_dir, constants.INFERENCE_FEATURE_MATRIX_FILE_NAME
             )
             self.schema_file_path: str = os.path.join(
-                self.feature_matrix_root_dir, constants.FEATURE_MATRIX_SCHEMA_FILE_NAME
+                self.feature_matrix_root_dir, constants.INFERENCE_FEATURE_MATRIX_SCHEMA_FILE_NAME
             )
             self.metadata_file_path: str = os.path.join(
-                self.feature_matrix_root_dir, constants.FEATURE_MATRIX_METADATA_FILE_NAME
+                self.feature_matrix_root_dir, constants.INFERENCE_FEATURE_MATRIX_METADATA_FILE_NAME
             )
 
             # Upstream S3 Data Lake Location
@@ -506,4 +506,31 @@ class InferenceInputFeatureMatrixBuilderConfig:
 
         except Exception as e:
             logging.exception("Error initializing InferenceInputFeatureMatrixBuilderConfig.")
+            raise CustomException(e, sys) from e
+
+
+class InferenceValidatorConfig:
+    def __init__(self, inference_pipeline_config: InferencePipelineConfig) -> None:
+        try:
+            # Root directory for this specific component
+            self.validator_root_dir: str = os.path.join(
+                inference_pipeline_config.root_dir,
+                constants.INFERENCE_VALIDATOR_ROOT_DIR_NAME,
+            )
+
+            self.report_file_path: str = os.path.join(
+                self.validator_root_dir,
+                constants.INFERENCE_VALIDATOR_REPORT_FILE_NAME
+            )
+            self.metadata_file_path: str = os.path.join(
+                self.validator_root_dir,
+                constants.INFERENCE_VALIDATOR_METADATA_FILE_NAME
+            )
+
+            # Pre-create the directory structure for safe local I/O
+            os.makedirs(self.validator_root_dir, exist_ok=True)
+            logging.info("InferenceValidatorConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing InferenceValidatorConfig.")
             raise CustomException(e, sys) from e

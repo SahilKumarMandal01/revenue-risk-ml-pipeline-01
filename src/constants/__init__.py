@@ -135,13 +135,18 @@ MODEL_REGISTRY_METADATA_FILE_NAME: str = "metadata.json"
 INFERENCE_PIPELINE_ROOT_DIR_NAME: str = "inference_pipeline"
 
 # 01 - Current Production Model Loader
-MODEL_LOADER_ROOT_DIR_NAME: str = "01_model_loader"
-MODEL_LOADER_MODEL_FILE_NAME: str = "model.pkl"
-MODEL_LOADER_SCHEMA_FILE_NAME: str = "schema.json"
-MODEL_LOADER_METADATA_FILE_NAME: str = "metadata.json"
+INFERENCE_MODEL_LOADER_ROOT_DIR_NAME: str = "01_model_loader"
+INFERENCE_MODEL_LOADER_MODEL_FILE_NAME: str = "model.pkl"
+INFERENCE_MODEL_LOADER_SCHEMA_FILE_NAME: str = "schema.json"
+INFERENCE_MODEL_LOADER_METADATA_FILE_NAME: str = "metadata.json"
 
 # 02 - Input Feature Matrix Builder
-FEATURE_MATRIX_BUILDER_ROOT_DIR_NAME: str = "02_input_feature_matrix_builder"
-FEATURE_MATRIX_FILE_NAME: str = "input_feature_matrix.parquet"
-FEATURE_MATRIX_SCHEMA_FILE_NAME: str = "schema.json"
-FEATURE_MATRIX_METADATA_FILE_NAME: str = "metadata.json"
+INFERENCE_FEATURE_MATRIX_BUILDER_ROOT_DIR_NAME: str = "02_input_feature_matrix_builder"
+INFERENCE_FEATURE_MATRIX_FILE_NAME: str = "input_feature_matrix.parquet"
+INFERENCE_FEATURE_MATRIX_SCHEMA_FILE_NAME: str = "schema.json"
+INFERENCE_FEATURE_MATRIX_METADATA_FILE_NAME: str = "metadata.json"
+
+# 03 - Input Feature Matrix Validator
+INFERENCE_VALIDATOR_ROOT_DIR_NAME: str = "03_validator"
+INFERENCE_VALIDATOR_REPORT_FILE_NAME: str = "report.json"
+INFERENCE_VALIDATOR_METADATA_FILE_NAME: str = "metadata.json"

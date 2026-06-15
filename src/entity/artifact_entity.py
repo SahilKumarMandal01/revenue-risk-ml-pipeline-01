@@ -240,3 +240,17 @@ class InferenceInputFeatureMatrixBuilderArtifact:
             f"  snapshot_date = {self.snapshot_date}\n"
             ")"
         )
+
+
+@dataclass(frozen=True)
+class InferenceValidatorArtifact:
+    is_valid: bool
+    report_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nInferenceValidatorArtifact(\n"
+            f"  is_valid = {self.is_valid}\n"
+            f"  report_file_path = {self.report_file_path}\n"
+            ")"
+        )

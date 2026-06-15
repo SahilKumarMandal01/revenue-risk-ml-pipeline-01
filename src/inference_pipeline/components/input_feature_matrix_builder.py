@@ -1,5 +1,3 @@
-# src/inference_pipeline/components/input_feature_matrix_builder.py
-
 import os
 import sys
 import time
@@ -14,6 +12,7 @@ from src.shared.shared_feature import SharedFeatureGenerator
 from src.custom_exception import CustomException
 from src.custom_logging import logging
 from src.utils.main_utils import write_json_file
+from src.constants import SYSTEM_COLUMNS_TO_DROP
 
 
 class InputFeatureMatrixBuilder:
@@ -23,10 +22,11 @@ class InputFeatureMatrixBuilder:
     Responsibilities:
     - Establish an out-of-core DuckDB connection directly to the S3 Data Lake.
     - Utilize the `SharedFeatureGenerator` to mathematically enforce zero training-serving skew.
-    - Execute a federated query across Hive-partitioned S3 directories (Predicate Pushdown).
+    - Execute a federated query across Hive-partitioned S3 directories.
     - Materialize the active customer scoring population up to the execution snapshot bound.
     - Export the final feature matrix directly to a local Parquet file.
-    - Generate strict schema definitions and observability metadata.
+    - Generate strict schema definitions that explicitly isolate Entity IDs from Predictive Features
+      to support downstream Validator and Predictor requirements.
     """
 
     def __init__(self, config: InferenceInputFeatureMatrixBuilderConfig) -> None:
@@ -66,10 +66,10 @@ class InputFeatureMatrixBuilder:
             con = self._initialize_duckdb_s3_connection()
 
             try:
-                # 2. Build and export the Feature Matrix
+                # 2. Build and export the Feature Matrix (Payload includes Entities + Features)
                 self._build_and_export_feature_matrix(con)
 
-                # 3. Generate Schema Definition
+                # 3. Generate Schema Definition (Strictly isolates Entities from Features)
                 schema_info = self._generate_schema(con)
 
                 # 4. Generate Telemetry & Metadata
@@ -141,6 +141,9 @@ class InputFeatureMatrixBuilder:
         Retrieves the exact unified SQL feature logic from the SharedFeatureGenerator,
         executes it against the Hive-partitioned S3 Lake, and streams the output 
         directly into a local Snappy-compressed Parquet file.
+        
+        Note: The resulting Parquet file intentionally retains system columns (like 
+        customer_unique_id) to serve as Entity Keys for downstream prediction mapping.
         """
         try:
             logging.info("Acquiring point-in-time SQL logic from SharedFeatureGenerator.")
@@ -170,29 +173,57 @@ class InputFeatureMatrixBuilder:
     # ==========================================================
     def _generate_schema(self, con: duckdb.DuckDBPyConnection) -> Dict[str, Any]:
         """
-        Dynamically infers the exact physical schema of the generated inference matrix 
-        to ensure data contracts match the Model Loader's expectations.
+        Dynamically infers the exact physical schema of the generated inference matrix.
+        Crucially, this method implements the Payload Split pattern by explicitly
+        isolating Entity IDs (System Columns) from Predictive Features to ensure
+        the downstream Validator and Predictor evaluate the correct mathematical contract.
         """
         try:
-            logging.info("Inferring structural schema from the generated feature matrix.")
+            logging.info("Inferring structural schema and categorizing Entities vs Features.")
             
             describe_query = f"DESCRIBE SELECT * FROM read_parquet('{self.config.feature_matrix_file_path}')"
             describe_res = con.execute(describe_query).fetchall()
 
-            columns = [row[0] for row in describe_res]
-            dtypes = {row[0]: row[1] for row in describe_res}
+            features_list = []
+            entities_list = []
+            feature_index = 0
+            
+            for row in describe_res:
+                col_name = str(row[0])
+                physical_type = str(row[1])
+                is_nullable = str(row[2]).strip().upper() == "YES"
+                
+                definition = {
+                    "name": col_name,
+                    "physical_type": physical_type,
+                    "is_nullable": is_nullable
+                }
+                
+                # Categorize columns based on the global pipeline constants
+                if col_name in SYSTEM_COLUMNS_TO_DROP:
+                    definition["description"] = f"Entity Key / System Column: {col_name}"
+                    entities_list.append(definition)
+                else:
+                    definition["index"] = feature_index
+                    definition["description"] = f"Predictive Feature: {col_name}"
+                    features_list.append(definition)
+                    feature_index += 1
 
-            schema_info = {
-                "columns": columns,
-                "dtypes": dtypes,
-                "num_columns": len(columns),
-                "snapshot_date": self.config.snapshot_date
+            schema_blueprint = {
+                "metadata": {
+                    "schema_version": "1.0",
+                    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+                    "snapshot_date": self.config.snapshot_date,
+                    "environment": "inference"
+                },
+                "entities": entities_list,
+                "features": features_list
             }
 
-            write_json_file(file_path=self.config.schema_file_path, content=schema_info)
+            write_json_file(file_path=self.config.schema_file_path, content=schema_blueprint)
             logging.info("Schema definition saved to %s", self.config.schema_file_path)
 
-            return schema_info
+            return schema_blueprint
 
         except Exception as e:
             logging.exception("Failed to dynamically generate schema definition.")
@@ -201,7 +232,7 @@ class InputFeatureMatrixBuilder:
     def _generate_metadata(
         self, 
         con: duckdb.DuckDBPyConnection, 
-        schema_info: Dict[str, Any], 
+        schema_blueprint: Dict[str, Any], 
         execution_time: float
     ) -> None:
         """
@@ -215,6 +246,13 @@ class InputFeatureMatrixBuilder:
             count_query = f"SELECT COUNT(*) FROM read_parquet('{self.config.feature_matrix_file_path}')"
             total_rows_res = con.execute(count_query).fetchone()
             total_rows = total_rows_res[0] if total_rows_res else 0
+            
+            # Extract names for logging
+            features_list = schema_blueprint.get("features", [])
+            feature_names = [feature.get("name") for feature in features_list]
+            
+            entities_list = schema_blueprint.get("entities", [])
+            entity_names = [entity.get("name") for entity in entities_list]
 
             metadata: Dict[str, Any] = {
                 "pipeline_stage": "Inference Feature Matrix Builder",
@@ -228,10 +266,11 @@ class InputFeatureMatrixBuilder:
                     "total_eligible_customers": total_rows,
                     "eligibility_rule": "At least one successful historical order prior to snapshot date.",
                 },
-                "feature_engineering": {
-                    "strategy": "SharedFeatureGenerator (Zero Training-Serving Skew)",
-                    "total_features_generated": schema_info["num_columns"],
-                    "features_list": schema_info["columns"],
+                "schema_enforcement": {
+                    "strategy": "Payload Split (Entities separated from Features)",
+                    "entity_keys_retained": entity_names,
+                    "total_features_generated": len(features_list),
+                    "features_list": feature_names,
                 },
                 "artifacts": {
                     "feature_matrix_path": self.config.feature_matrix_file_path,

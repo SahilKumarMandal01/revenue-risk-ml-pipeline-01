@@ -215,66 +215,73 @@ class DataTransformation:
         """
         Dynamically extracts structural metadata, types, and constraints from the 
         training dataframe to build an exact, immutable JSON schema blueprint.
+        The schema is structured to ensure absolute compatibility with downstream
+        Inference Validators.
         """
         try:
             logging.info("Dynamically generating production schema blueprint.")
             
-            features_dict = {}
-            for col in X.columns:
-                dtype_name = str(X[col].dtype)
-                is_null = bool(X[col].isnull().any())
+            features_list = []
+            
+            for index, col_name in enumerate(X.columns):
+                physical_type = str(X[col_name].dtype)
+                is_nullable = bool(X[col_name].isnull().any())
+                
+                feature_definition = {
+                    "name": col_name,
+                    "index": index,
+                    "physical_type": physical_type,
+                    "is_nullable": is_nullable,
+                    "description": f"Feature representing {col_name}."
+                }
                 
                 # Identify Categorical Features
-                if dtype_name in ["category", "object", "string"]:
-                    allowed_vals = [str(val) for val in X[col].dropna().unique()]
-                    features_dict[col] = {
-                        "type": "categorical",
-                        "pandas_dtype": "category",
-                        "nullable": is_null,
-                        "allowed_values": allowed_vals,
-                        "description": f"Categorical feature representing {col}."
-                    }
+                if physical_type in ["category", "object", "string"]:
+                    feature_definition["logical_type"] = "categorical"
+                    allowed_vals = sorted([str(val) for val in X[col_name].dropna().unique()])
+                    feature_definition["domain"] = {"allowed_values": allowed_vals}
                 else:
                     # Treat as Numerical Feature
-                    min_val = float(X[col].min()) if pd.notnull(X[col].min()) else None
-                    max_val = float(X[col].max()) if pd.notnull(X[col].max()) else None
+                    min_val = float(X[col_name].min()) if pd.notnull(X[col_name].min()) else None
+                    max_val = float(X[col_name].max()) if pd.notnull(X[col_name].max()) else None
                     
-                    constraints = {}
-                    if min_val is not None:
-                        constraints["min"] = int(min_val) if min_val.is_integer() else min_val
-                    if max_val is not None:
-                        constraints["max"] = int(max_val) if max_val.is_integer() else max_val
+                    # Clean up integers for JSON serialization
+                    if min_val is not None and min_val.is_integer():
+                        min_val = int(min_val)
+                    if max_val is not None and max_val.is_integer():
+                        max_val = int(max_val)
                         
-                    unique_vals = X[col].dropna().unique()
+                    unique_vals = X[col_name].dropna().unique()
                     
                     # Heuristic for Binary / Flag Numerical Indicators
                     if len(unique_vals) <= 2 and all(v in [0, 1, 0.0, 1.0] for v in unique_vals):
+                        feature_definition["logical_type"] = "boolean_indicator"
                         allowed = sorted([int(v) for v in unique_vals])
-                        features_dict[col] = {
-                            "type": "numerical",
-                            "pandas_dtype": dtype_name,
-                            "nullable": is_null,
-                            "allowed_values": allowed,
-                            "description": f"Binary indicator feature representing {col}."
-                        }
+                        feature_definition["domain"] = {"allowed_values": allowed}
                     else:
-                        features_dict[col] = {
-                            "type": "numerical",
-                            "pandas_dtype": dtype_name,
-                            "nullable": is_null,
-                            "constraints": constraints,
-                            "description": f"Numerical feature representing {col}."
-                        }
+                        feature_definition["logical_type"] = "numerical"
+                        domain_constraints = {}
+                        if min_val is not None:
+                            domain_constraints["min"] = min_val
+                        if max_val is not None:
+                            domain_constraints["max"] = max_val
+                        feature_definition["domain"] = domain_constraints
+
+                features_list.append(feature_definition)
 
             # Assemble Final Schema Structure
             schema_blueprint = {
-                "system_context": {
-                    "target_column": self.config.target_column,
-                    "total_features": len(X.columns),
+                "metadata": {
+                    "schema_version": "1.0",
+                    "generated_at_utc": datetime.now(timezone.utc).isoformat(),
                     "model_compatibility": "XGBClassifier_Native_Categorical"
                 },
-                "column_ordering": X.columns.tolist(),
-                "features": features_dict
+                "target": {
+                    "name": self.config.target_column,
+                    "description": "Forward-looking target variable.",
+                    "logical_type": "boolean_indicator"
+                },
+                "features": features_list
             }
             
             write_json_file(file_path=self.config.schema_file_path, content=schema_blueprint)
