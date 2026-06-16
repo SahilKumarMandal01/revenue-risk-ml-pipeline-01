@@ -113,7 +113,7 @@ class InferenceValidator:
                 report_file_path=self.config.report_file_path
             )
 
-            logging.info("Validation phase completed. Contract valid: %s", is_valid)
+            logging.info("Validation phase completed successfully: %s", artifact)
             return artifact
 
         except Exception as e:

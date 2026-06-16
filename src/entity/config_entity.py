@@ -534,3 +534,40 @@ class InferenceValidatorConfig:
         except Exception as e:
             logging.exception("Error initializing InferenceValidatorConfig.")
             raise CustomException(e, sys) from e
+
+
+class InferenceReportGeneratorConfig:
+    """
+    Configuration for the Inference Publisher (Report Generator) component.
+    Defines the probability threshold for churn classification and output 
+    paths for the CSV, Parquet, and JSON artifacts.
+    """
+    def __init__(self, inference_pipeline_config: InferencePipelineConfig) -> None:
+        try:
+            self.run_id: str = inference_pipeline_config.run_id
+            self.report_generator_root_dir: str = os.path.join(
+                inference_pipeline_config.root_dir,
+                constants.INFERENCE_REPORT_GENERATOR_ROOT_DIR_NAME,
+            )
+
+            self.csv_report_path: str = os.path.join(
+                self.report_generator_root_dir,
+                constants.INFERENCE_REPORT_GENERATOR_CSV_FILE_NAME,
+            )
+            self.telemetry_log_path: str = os.path.join(
+                self.report_generator_root_dir,
+                constants.INFERENCE_REPORT_GENERATOR_TELEMETRY_FILE_NAME,
+            )
+            self.metadata_file_path: str = os.path.join(
+                self.report_generator_root_dir,
+                constants.INFERENCE_REPORT_GENERATOR_METADATA_FILE_NAME,
+            )
+            
+            self.probability_threshold: float = constants.INFERENCE_REPORT_GENERATOR_PROBABILITY_THRESHOLD
+
+            os.makedirs(self.report_generator_root_dir, exist_ok=True)
+            logging.info("InferenceReportGeneratorConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing InferenceReportGeneratorConfig.")
+            raise CustomException(e, sys) from e

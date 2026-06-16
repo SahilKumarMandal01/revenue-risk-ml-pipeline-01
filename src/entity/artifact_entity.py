@@ -254,3 +254,23 @@ class InferenceValidatorArtifact:
             f"  report_file_path = {self.report_file_path}\n"
             ")"
         )
+
+
+@dataclass(frozen=True)
+class InferenceReportGeneratorArtifact:
+    """
+    Artifact containing the definitive paths for the three generated Publisher artifacts:
+    the business-facing CSV report, the engineering Parquet telemetry log, and the JSON metadata.
+    """
+    csv_report_path: str
+    telemetry_log_path: str
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nInferenceReportGeneratorArtifact(\n"
+            f"  csv_report_path = {self.csv_report_path}\n"
+            f"  telemetry_log_path = {self.telemetry_log_path}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")"
+        )
