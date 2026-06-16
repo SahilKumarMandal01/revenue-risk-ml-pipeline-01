@@ -23,9 +23,13 @@ S3_MODEL_REGISTRY_MODELS_DIR: str = "models"
 S3_MODEL_REGISTRY_STATE_DIR: str = "state"
 S3_MODEL_REGISTRY_POINTER_FILE_NAME: str = "production_champion.json"
 
-
+# Data Lake S3 Paths
 S3_CUSTOMER_DATABASE_NAME: str = "company-central-data-lake"
 S3_DATA_LAKE_BRONZE_DIR_NAME: str = "bronze"
+
+# Inference Publisher S3 Paths
+S3_INFERENCE_BUSINESS_REPORTS_DIR: str = "business_reports/customer_churn"
+S3_INFERENCE_MLOPS_TELEMETRY_DIR: str = "mlops_telemetry/inference_logs/pipeline=churn_prediction"
 
 
 # ==========================================================
@@ -157,3 +161,7 @@ INFERENCE_REPORT_GENERATOR_CSV_FILE_NAME: str = "customer_churn_report.csv"
 INFERENCE_REPORT_GENERATOR_TELEMETRY_FILE_NAME: str = "telemetry_log.parquet"
 INFERENCE_REPORT_GENERATOR_METADATA_FILE_NAME: str = "metadata.json"
 INFERENCE_REPORT_GENERATOR_PROBABILITY_THRESHOLD: float = 0.5
+
+# 05 - Report Publisher
+INFERENCE_REPORT_PUBLISHER_ROOT_DIR_NAME: str = "05_report_publisher"
+INFERENCE_REPORT_PUBLISHER_METADATA_FILE_NAME: str = "metadata.json"

@@ -571,3 +571,33 @@ class InferenceReportGeneratorConfig:
         except Exception as e:
             logging.exception("Error initializing InferenceReportGeneratorConfig.")
             raise CustomException(e, sys) from e
+
+
+class InferenceReportPublisherConfig:
+    """
+    Configuration for the Inference Report Publisher component.
+    Defines S3 base URIs for partitioned uploads and local paths for metadata tracking.
+    """
+    def __init__(self, inference_pipeline_config: InferencePipelineConfig) -> None:
+        try:
+            self.run_id: str = inference_pipeline_config.run_id
+            self.report_publisher_root_dir: str = os.path.join(
+                inference_pipeline_config.root_dir,
+                constants.INFERENCE_REPORT_PUBLISHER_ROOT_DIR_NAME,
+            )
+            
+            self.metadata_file_path: str = os.path.join(
+                self.report_publisher_root_dir,
+                constants.INFERENCE_REPORT_PUBLISHER_METADATA_FILE_NAME,
+            )
+
+            # S3 Base URIs (will be dynamically appended with Hive partitions during execution)
+            self.s3_business_reports_base_uri: str = f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_INFERENCE_BUSINESS_REPORTS_DIR}"
+            self.s3_telemetry_logs_base_uri: str = f"s3://{constants.S3_BUCKET_NAME}/{constants.S3_INFERENCE_MLOPS_TELEMETRY_DIR}"
+
+            os.makedirs(self.report_publisher_root_dir, exist_ok=True)
+            logging.info("InferenceReportPublisherConfig initialized.")
+
+        except Exception as e:
+            logging.exception("Error initializing InferenceReportPublisherConfig.")
+            raise CustomException(e, sys) from e

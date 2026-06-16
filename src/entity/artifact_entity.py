@@ -274,3 +274,23 @@ class InferenceReportGeneratorArtifact:
             f"  metadata_file_path = {self.metadata_file_path}\n"
             ")"
         )
+
+
+@dataclass(frozen=True)
+class InferenceReportPublisherArtifact:
+    """
+    Artifact representing the final state of the Inference Pipeline. Contains the
+    cloud URIs of the securely vaulted reports and the local path to the upload manifest.
+    """
+    published_business_report_uri: str
+    published_telemetry_log_uri: str
+    metadata_file_path: str
+
+    def __str__(self) -> str:
+        return (
+            "\nInferenceReportPublisherArtifact(\n"
+            f"  published_business_report_uri = {self.published_business_report_uri}\n"
+            f"  published_telemetry_log_uri = {self.published_telemetry_log_uri}\n"
+            f"  metadata_file_path = {self.metadata_file_path}\n"
+            ")"
+        )
